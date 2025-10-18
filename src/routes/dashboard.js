@@ -325,6 +325,39 @@ router.get('/debug-org', async (req, res) => {
   }
 });
 
+// Simple test endpoint to verify database connection
+router.get('/test-db', async (req, res) => {
+  try {
+    console.log('Testing database connection...');
+    
+    // Test basic Prisma connection
+    const orgCount = await prisma.organization.count();
+    console.log('Organization count:', orgCount);
+    
+    // Test specific organization lookup
+    const org = await prisma.organization.findFirst({
+      where: { name: 'Tech Community Hub' },
+      select: { id: true, name: true, type: true }
+    });
+    
+    console.log('Tech Community Hub found:', org);
+    
+    res.json({
+      success: true,
+      orgCount: orgCount,
+      techCommunityHub: org,
+      message: 'Database connection working'
+    });
+  } catch (error) {
+    console.error('Database test error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Test endpoint for authentication (temporary for development)
 router.post('/test-login', async (req, res) => {
   try {
