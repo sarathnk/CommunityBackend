@@ -8,9 +8,9 @@ const prisma = new PrismaClient();
 // GET /api/dashboard - Get dashboard statistics
 router.get('/', async (req, res) => {
   try {
-    // For testing without auth, use a real organization ID from seeded data
-    const userId = 'test-user-123';
-    const organizationId = 'cmgq2aw8o0000v74kdwj2bvm1'; // Super Admin Organization ID
+    // For testing, use the Tech Community Hub organization ID
+    const userId = 'cmgvnntie000jv7vw9cteyx1n';
+    const organizationId = 'cmgvnnsu30007v7vw7gf4oca9';
 
     console.log('Dashboard API: Fetching dashboard data for user:', userId, 'org:', organizationId);
     
@@ -20,6 +20,11 @@ router.get('/', async (req, res) => {
       select: { id: true, name: true }
     });
     console.log('Dashboard API: Organization check result:', orgCheck);
+    
+    if (!orgCheck) {
+      console.log('Dashboard API: Organization not found in database for ID:', organizationId);
+      return res.status(404).json({ error: 'Organization not found' });
+    }
 
     // Get organization details
     const organization = await prisma.organization.findUnique({
@@ -293,6 +298,34 @@ router.delete('/test-attendees/:eventId/:attendeeId', async (req, res) => {
       success: false,
       error: 'Failed to remove attendee',
     });
+  }
+});
+
+// Debug endpoint to test organization lookup
+router.get('/debug-org', requireAuth, async (req, res) => {
+  try {
+    const organizationId = req.user.orgId;
+    console.log('Debug: Looking up organization ID:', organizationId);
+    
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      select: { id: true, name: true, type: true }
+    });
+    
+    console.log('Debug: Organization found:', org);
+    
+    res.json({
+      success: true,
+      organizationId: organizationId,
+      organization: org,
+      user: {
+        id: req.user.sub,
+        role: req.user.role
+      }
+    });
+  } catch (error) {
+    console.error('Debug org lookup error:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
