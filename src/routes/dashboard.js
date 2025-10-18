@@ -301,10 +301,10 @@ router.delete('/test-attendees/:eventId/:attendeeId', async (req, res) => {
   }
 });
 
-// Debug endpoint to test organization lookup
-router.get('/debug-org', requireAuth, async (req, res) => {
+// Debug endpoint to test organization lookup (public for testing)
+router.get('/debug-org', async (req, res) => {
   try {
-    const organizationId = req.user.orgId;
+    const organizationId = 'cmgvnnsu30007v7vw7gf4oca9'; // Tech Community Hub ID
     console.log('Debug: Looking up organization ID:', organizationId);
     
     const org = await prisma.organization.findUnique({
@@ -317,11 +317,7 @@ router.get('/debug-org', requireAuth, async (req, res) => {
     res.json({
       success: true,
       organizationId: organizationId,
-      organization: org,
-      user: {
-        id: req.user.sub,
-        role: req.user.role
-      }
+      organization: org
     });
   } catch (error) {
     console.error('Debug org lookup error:', error);
