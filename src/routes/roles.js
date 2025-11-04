@@ -8,6 +8,7 @@ router.get('/', requireAuth, async (req, res) => {
   const q = String(req.query.q || '').trim();
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || '20')) || 20, 1), 100);
   const cursor = req.query.cursor ? String(req.query.cursor) : undefined;
+  const requestedOrgId = req.query.organizationId ? String(req.query.organizationId).trim() : null;
 
   // Get user's role to check if they're super admin
   const user = await prisma.user.findUnique({ 
@@ -17,17 +18,41 @@ router.get('/', requireAuth, async (req, res) => {
   
   if (!user) return res.status(401).json({ message: 'User not found' });
 
-  const organizationId = req.user.organizationId || req.user.orgId;
-  if (!organizationId && !user.role.permissions.includes('*')) {
-    return res.status(401).json({ message: 'User organization not found' });
+  const userOrgId = req.user.organizationId || req.user.orgId;
+  const isSuperAdmin = user.role.permissions.includes('*');
+
+  // Determine which organization ID to use for filtering
+  let organizationId;
+  
+  if (requestedOrgId) {
+    // If organizationId query parameter is provided
+    if (isSuperAdmin) {
+      // Super admin can query any organization
+      organizationId = requestedOrgId;
+    } else {
+      // Regular users can only query their own organization
+      if (requestedOrgId !== userOrgId) {
+        return res.status(403).json({ message: 'You can only access roles from your organization' });
+      }
+      organizationId = requestedOrgId;
+    }
+  } else {
+    // No query parameter - use default behavior
+    if (isSuperAdmin) {
+      // Super admin sees all organizations (no filter)
+      organizationId = null;
+    } else {
+      // Regular users see only their organization
+      if (!userOrgId) {
+        return res.status(401).json({ message: 'User organization not found' });
+      }
+      organizationId = userOrgId;
+    }
   }
 
-  // Super admin can see all roles, others only see their organization
+  // Build where clause
   const where = {
-    ...(user.role.permissions.includes('*') 
-      ? {} // Super admin sees all organizations
-      : { organizationId: organizationId } // Regular users see only their org
-    ),
+    ...(organizationId ? { organizationId: organizationId } : {}), // Filter by org if specified
     ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] } : {}),
   };
 
