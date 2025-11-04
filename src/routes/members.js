@@ -78,32 +78,98 @@ router.get('/', requireAuth, async (req, res) => {
 });
 
 router.post('/', requireAuth, requirePermission('members.write'), async (req, res) => {
-  const { fullName, phoneNumber, password, roleId, photoUrl } = req.body;
-  if (!fullName || !phoneNumber || !roleId) return res.status(400).json({ message: 'Invalid payload' });
-  const organizationId = req.user.organizationId || req.user.orgId;
-  if (!organizationId) {
-    return res.status(401).json({ message: 'User organization not found' });
-  }
+  try {
+    const { fullName, phoneNumber, password, roleId, photoUrl } = req.body;
+    
+    // Validate required fields
+    if (!fullName || !phoneNumber || !roleId) {
+      return res.status(400).json({ message: 'Invalid payload: fullName, phoneNumber, and roleId are required' });
+    }
 
-  // Ensure role belongs to requester's organization
-  const role = await prisma.role.findFirst({ where: { id: roleId, organizationId: organizationId } });
-  if (!role) return res.status(400).json({ message: 'Invalid role' });
-  
-  // Generate a default password if none provided
-  const defaultPassword = password || 'Welcome123!';
-  const passwordHash = await bcrypt.hash(defaultPassword, 10);
-  
-  const user = await prisma.user.create({ 
-    data: { 
-      fullName, 
-      phoneNumber, 
-      passwordHash, 
-      photoUrl: photoUrl || null,
-      organizationId: organizationId, 
-      roleId 
-    } 
-  });
-  return res.status(201).json({ id: user.id });
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
+    // Normalize phone number (ensure it has +91 prefix if Indian number)
+    let normalizedPhone = phoneNumber.trim();
+    if (normalizedPhone.startsWith('91') && !normalizedPhone.startsWith('+91')) {
+      normalizedPhone = '+' + normalizedPhone;
+    } else if (!normalizedPhone.startsWith('+')) {
+      normalizedPhone = '+91' + normalizedPhone;
+    }
+
+    // Check if phone number already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { phoneNumber: normalizedPhone }
+    });
+
+    if (existingUser) {
+      return res.status(400).json({ 
+        message: 'User with this phone number already exists',
+        phoneNumber: normalizedPhone
+      });
+    }
+
+    // Ensure role belongs to requester's organization
+    const role = await prisma.role.findFirst({ 
+      where: { id: roleId, organizationId: organizationId } 
+    });
+    
+    if (!role) {
+      return res.status(400).json({ 
+        message: 'Invalid role: role does not belong to your organization',
+        roleId: roleId,
+        organizationId: organizationId
+      });
+    }
+    
+    // Generate a default password if none provided
+    const defaultPassword = password || 'Welcome123!';
+    const passwordHash = await bcrypt.hash(defaultPassword, 10);
+    
+    // Create the user
+    const user = await prisma.user.create({ 
+      data: { 
+        fullName: fullName.trim(), 
+        phoneNumber: normalizedPhone, 
+        passwordHash, 
+        photoUrl: photoUrl || null,
+        organizationId: organizationId, 
+        roleId 
+      } 
+    });
+
+    return res.status(201).json({ 
+      id: user.id,
+      fullName: user.fullName,
+      phoneNumber: user.phoneNumber
+    });
+  } catch (error) {
+    console.error('[POST /api/members] Error:', error);
+    
+    // Handle Prisma unique constraint violations
+    if (error.code === 'P2002') {
+      return res.status(400).json({ 
+        message: 'User with this phone number already exists',
+        error: error.meta?.target 
+      });
+    }
+    
+    // Handle other Prisma errors
+    if (error.code && error.code.startsWith('P')) {
+      return res.status(400).json({ 
+        message: 'Database error occurred',
+        error: error.message 
+      });
+    }
+    
+    // Generic error
+    return res.status(500).json({ 
+      message: 'Server error occurred while creating member',
+      error: error.message 
+    });
+  }
 });
 
 router.put('/:id', requireAuth, requirePermission('members.write'), async (req, res) => {
