@@ -1,16 +1,20 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import { requireAuth } from '../middlewares/auth.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 
 // GET /api/event-financials - Get all events with financial data
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
     console.log('Event Financials API: Fetching events with financial data');
 
-    // For testing without auth, use a real organization ID from seeded data
-    const organizationId = 'cmgq2aw8o0000v74kdwj2bvm1'; // Super Admin Organization ID
+    // Use authenticated user's organization
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
 
     // Get events with financial data
     const events = await prisma.event.findMany({
@@ -115,14 +119,21 @@ router.get('/', async (req, res) => {
 });
 
 // GET /api/event-financials/:eventId - Get financial data for a specific event
-router.get('/:eventId', async (req, res) => {
+router.get('/:eventId', requireAuth, async (req, res) => {
   try {
     const { eventId } = req.params;
     console.log('Event Financials API: Fetching financial data for event:', eventId);
 
-    const event = await prisma.event.findUnique({
+    // Use authenticated user's organization
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
+    const event = await prisma.event.findFirst({
       where: {
         id: eventId,
+        organizationId: organizationId,
         budget: { not: null },
         actualCost: { not: null },
       },

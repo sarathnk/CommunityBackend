@@ -9,8 +9,13 @@ router.get('/', requireAuth, async (req, res) => {
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || '20')) || 20, 1), 100);
   const cursor = req.query.cursor ? String(req.query.cursor) : undefined;
 
+  const organizationId = req.user.organizationId || req.user.orgId;
+  if (!organizationId) {
+    return res.status(401).json({ message: 'User organization not found' });
+  }
+
   const where = {
-    organizationId: req.user.orgId,
+    organizationId: organizationId,
     ...(q ? { OR: [{ title: { contains: q, mode: 'insensitive' } }, { content: { contains: q, mode: 'insensitive' } }] } : {}),
   };
 
@@ -38,7 +43,7 @@ router.post('/', requireAuth, requirePermission('announcements.write'), async (r
       isPinned: Boolean(isPinned),
       authorId: req.user.sub,
       authorName: 'Admin',
-      organizationId: req.user.orgId,
+      organizationId: req.user.organizationId || req.user.orgId,
     },
   });
   return res.status(201).json(a);

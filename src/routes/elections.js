@@ -12,8 +12,13 @@ router.get('/', requireAuth, async (req, res) => {
     const cursor = req.query.cursor ? String(req.query.cursor) : undefined;
     const status = req.query.status ? String(req.query.status) : undefined;
 
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const where = {
-      organizationId: req.user.orgId,
+      organizationId: organizationId,
       ...(q ? { 
         OR: [
           { title: { contains: q, mode: 'insensitive' } },
@@ -58,10 +63,15 @@ router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const election = await prisma.election.findFirst({
       where: { 
         id, 
-        organizationId: req.user.orgId 
+        organizationId: organizationId 
       },
       include: {
         candidates: {
@@ -119,8 +129,8 @@ router.post('/', requireAuth, requirePermission('elections.write'), async (req, 
         maxVotes: allowMultiple ? maxVotes : null,
         isAnonymous: isAnonymous || false,
         createdById: req.user.sub,
-        createdByName: req.user.name || 'Unknown',
-        organizationId: req.user.orgId,
+        createdByName: req.user.fullName || req.user.name || 'Unknown',
+        organizationId: req.user.organizationId || req.user.orgId,
         candidates: candidates ? {
           create: candidates.map((candidate, index) => ({
             name: candidate.name,
@@ -161,8 +171,13 @@ router.put('/:id', requireAuth, requirePermission('elections.write'), async (req
       status 
     } = req.body;
 
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const election = await prisma.election.findFirst({
-      where: { id, organizationId: req.user.orgId }
+      where: { id, organizationId: organizationId }
     });
 
     if (!election) {
@@ -201,8 +216,13 @@ router.delete('/:id', requireAuth, requirePermission('elections.write'), async (
   try {
     const { id } = req.params;
 
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const election = await prisma.election.findFirst({
-      where: { id, organizationId: req.user.orgId }
+      where: { id, organizationId: organizationId }
     });
 
     if (!election) {
@@ -231,8 +251,13 @@ router.post('/:id/candidates', requireAuth, requirePermission('elections.write')
       return res.status(400).json({ message: 'Candidate name is required' });
     }
 
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const election = await prisma.election.findFirst({
-      where: { id, organizationId: req.user.orgId }
+      where: { id, organizationId: organizationId }
     });
 
     if (!election) {
@@ -269,8 +294,13 @@ router.put('/:id/candidates/:candidateId', requireAuth, requirePermission('elect
     const { id, candidateId } = req.params;
     const { name, description, photoUrl, position, order } = req.body;
 
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const election = await prisma.election.findFirst({
-      where: { id, organizationId: req.user.orgId }
+      where: { id, organizationId: organizationId }
     });
 
     if (!election) {
@@ -308,8 +338,13 @@ router.delete('/:id/candidates/:candidateId', requireAuth, requirePermission('el
   try {
     const { id, candidateId } = req.params;
 
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const election = await prisma.election.findFirst({
-      where: { id, organizationId: req.user.orgId }
+      where: { id, organizationId: organizationId }
     });
 
     if (!election) {
@@ -393,7 +428,7 @@ router.post('/:id/vote', requireAuth, async (req, res) => {
     const votes = await prisma.vote.createMany({
       data: candidateIds.map(candidateId => ({
         voterId: req.user.sub,
-        voterName: req.user.name || 'Unknown',
+        voterName: req.user.fullName || req.user.name || 'Unknown',
         electionId: id,
         candidateId
       }))
@@ -411,8 +446,13 @@ router.get('/:id/results', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
 
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
+
     const election = await prisma.election.findFirst({
-      where: { id, organizationId: req.user.orgId },
+      where: { id, organizationId: organizationId },
       include: {
         candidates: {
           include: {

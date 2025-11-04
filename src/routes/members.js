@@ -18,11 +18,16 @@ router.get('/', requireAuth, async (req, res) => {
   
   if (!user) return res.status(401).json({ message: 'User not found' });
 
+  const organizationId = req.user.organizationId || req.user.orgId;
+  if (!organizationId && !user.role.permissions.includes('*')) {
+    return res.status(401).json({ message: 'User organization not found' });
+  }
+
   // Super admin can see all members, others only see their organization
   const where = {
     ...(user.role.permissions.includes('*') 
       ? {} // Super admin sees all organizations
-      : { organizationId: req.user.orgId } // Regular users see only their org
+      : { organizationId: organizationId } // Regular users see only their org
     ),
     ...(q
       ? {
@@ -75,8 +80,13 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requirePermission('members.write'), async (req, res) => {
   const { fullName, phoneNumber, password, roleId, photoUrl } = req.body;
   if (!fullName || !phoneNumber || !roleId) return res.status(400).json({ message: 'Invalid payload' });
+  const organizationId = req.user.organizationId || req.user.orgId;
+  if (!organizationId) {
+    return res.status(401).json({ message: 'User organization not found' });
+  }
+
   // Ensure role belongs to requester's organization
-  const role = await prisma.role.findFirst({ where: { id: roleId, organizationId: req.user.orgId } });
+  const role = await prisma.role.findFirst({ where: { id: roleId, organizationId: organizationId } });
   if (!role) return res.status(400).json({ message: 'Invalid role' });
   
   // Generate a default password if none provided
@@ -89,7 +99,7 @@ router.post('/', requireAuth, requirePermission('members.write'), async (req, re
       phoneNumber, 
       passwordHash, 
       photoUrl: photoUrl || null,
-      organizationId: req.user.orgId, 
+      organizationId: organizationId, 
       roleId 
     } 
   });
@@ -101,12 +111,13 @@ router.put('/:id', requireAuth, requirePermission('members.write'), async (req, 
   const { fullName, roleId, photoUrl } = req.body;
   console.log('[PUT /api/members/:id] id=', id, 'payload=', { fullName, roleId, photoUrl });
   // Determine if requester is super admin
+  const organizationId = req.user.organizationId || req.user.orgId;
   const requester = await prisma.user.findUnique({ where: { id: req.user.sub }, include: { role: true } });
   const isSuper = requester?.role?.permissions?.includes('*');
-  const user = await prisma.user.findFirst({ where: isSuper ? { id } : { id, organizationId: req.user.orgId } });
+  const user = await prisma.user.findFirst({ where: isSuper ? { id } : { id, organizationId: organizationId } });
   if (!user) return res.status(404).json({ message: 'Not found' });
   if (roleId) {
-    const role = await prisma.role.findFirst({ where: isSuper ? { id: roleId } : { id: roleId, organizationId: req.user.orgId } });
+    const role = await prisma.role.findFirst({ where: isSuper ? { id: roleId } : { id: roleId, organizationId: organizationId } });
     if (!role) return res.status(400).json({ message: 'Invalid role' });
   }
   const updated = await prisma.user.update({ 
@@ -123,9 +134,10 @@ router.put('/:id', requireAuth, requirePermission('members.write'), async (req, 
 
 router.delete('/:id', requireAuth, requirePermission('members.write'), async (req, res) => {
   const { id } = req.params;
+  const organizationId = req.user.organizationId || req.user.orgId;
   const requester = await prisma.user.findUnique({ where: { id: req.user.sub }, include: { role: true } });
   const isSuper = requester?.role?.permissions?.includes('*');
-  const user = await prisma.user.findFirst({ where: isSuper ? { id } : { id, organizationId: req.user.orgId } });
+  const user = await prisma.user.findFirst({ where: isSuper ? { id } : { id, organizationId: organizationId } });
   if (!user) return res.status(404).json({ message: 'Not found' });
   await prisma.user.delete({ where: { id } });
   return res.status(204).send();
