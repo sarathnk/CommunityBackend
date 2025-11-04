@@ -7,7 +7,10 @@ export const router = Router();
 // Get all chats for the user's organization
 router.get('/', requireAuth, async (req, res) => {
   try {
-    const { organizationId } = req.user;
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
     
     const chats = await prisma.chat.findMany({
       where: {
@@ -59,7 +62,12 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { name, description, type = 'group', isPrivate = false, participantIds = [] } = req.body;
-    const { id: userId, fullName: userName, organizationId } = req.user;
+    const userId = req.user.id || req.user.sub;
+    const userName = req.user.fullName || 'Unknown';
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
 
     if (!name) {
       return res.status(400).json({ message: 'Chat name is required' });
@@ -142,7 +150,10 @@ router.post('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const { organizationId } = req.user;
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
 
     const chat = await prisma.chat.findFirst({
       where: {
@@ -190,7 +201,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { name, description, isPrivate } = req.body;
-    const { organizationId } = req.user;
+    const organizationId = req.user.organizationId || req.user.orgId;
 
     // Check if user is admin of the chat
     const participant = await prisma.chatParticipant.findFirst({
@@ -243,7 +254,10 @@ router.post('/:id/participants', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
     const { participantIds } = req.body;
-    const { organizationId } = req.user;
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
 
     if (!participantIds || !Array.isArray(participantIds)) {
       return res.status(400).json({ message: 'Participant IDs are required' });
@@ -294,7 +308,7 @@ router.post('/:id/participants', requireAuth, async (req, res) => {
 router.delete('/:id/participants/:userId', requireAuth, async (req, res) => {
   try {
     const { id, userId } = req.params;
-    const { organizationId } = req.user;
+    const organizationId = req.user.organizationId || req.user.orgId;
 
     // Check if user is admin or moderator, or removing themselves
     const participant = await prisma.chatParticipant.findFirst({

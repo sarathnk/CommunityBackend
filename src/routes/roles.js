@@ -17,11 +17,16 @@ router.get('/', requireAuth, async (req, res) => {
   
   if (!user) return res.status(401).json({ message: 'User not found' });
 
+  const organizationId = req.user.organizationId || req.user.orgId;
+  if (!organizationId && !user.role.permissions.includes('*')) {
+    return res.status(401).json({ message: 'User organization not found' });
+  }
+
   // Super admin can see all roles, others only see their organization
   const where = {
     ...(user.role.permissions.includes('*') 
       ? {} // Super admin sees all organizations
-      : { organizationId: req.user.orgId } // Regular users see only their org
+      : { organizationId: organizationId } // Regular users see only their org
     ),
     ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { description: { contains: q, mode: 'insensitive' } }] } : {}),
   };
@@ -56,14 +61,22 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requirePermission('roles.write'), async (req, res) => {
   const { name, description, permissions, color } = req.body;
   if (!name) return res.status(400).json({ message: 'Name required' });
-  const role = await prisma.role.create({ data: { name, description: description || '', permissions: permissions || [], color: color || null, organizationId: req.user.orgId } });
+  const organizationId = req.user.organizationId || req.user.orgId;
+  if (!organizationId) {
+    return res.status(401).json({ message: 'User organization not found' });
+  }
+  const role = await prisma.role.create({ data: { name, description: description || '', permissions: permissions || [], color: color || null, organizationId: organizationId } });
   return res.status(201).json(role);
 });
 
 router.put('/:id', requireAuth, requirePermission('roles.write'), async (req, res) => {
   const { id } = req.params;
   const { name, description, permissions, color } = req.body;
-  const role = await prisma.role.findFirst({ where: { id, organizationId: req.user.orgId } });
+  const organizationId = req.user.organizationId || req.user.orgId;
+  if (!organizationId) {
+    return res.status(401).json({ message: 'User organization not found' });
+  }
+  const role = await prisma.role.findFirst({ where: { id, organizationId: organizationId } });
   if (!role) return res.status(404).json({ message: 'Not found' });
   const updated = await prisma.role.update({ where: { id }, data: { name: name ?? role.name, description: description ?? role.description, permissions: permissions ?? role.permissions, color: color ?? role.color } });
   return res.json(updated);
@@ -71,7 +84,11 @@ router.put('/:id', requireAuth, requirePermission('roles.write'), async (req, re
 
 router.delete('/:id', requireAuth, requirePermission('roles.write'), async (req, res) => {
   const { id } = req.params;
-  const role = await prisma.role.findFirst({ where: { id, organizationId: req.user.orgId } });
+  const organizationId = req.user.organizationId || req.user.orgId;
+  if (!organizationId) {
+    return res.status(401).json({ message: 'User organization not found' });
+  }
+  const role = await prisma.role.findFirst({ where: { id, organizationId: organizationId } });
   if (!role) return res.status(404).json({ message: 'Not found' });
   await prisma.user.updateMany({ where: { roleId: id }, data: { roleId: undefined } });
   await prisma.role.delete({ where: { id } });

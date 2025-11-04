@@ -9,7 +9,7 @@ router.get('/chat/:chatId', requireAuth, async (req, res) => {
   try {
     const { chatId } = req.params;
     const { page = 1, limit = 50 } = req.query;
-    const { organizationId } = req.user;
+    const organizationId = req.user.organizationId || req.user.orgId;
 
     // Check if user is participant in the chat
     const participant = await prisma.chatParticipant.findFirst({
@@ -73,7 +73,9 @@ router.get('/chat/:chatId', requireAuth, async (req, res) => {
 router.post('/', requireAuth, async (req, res) => {
   try {
     const { chatId, content, type = 'text', replyToId } = req.body;
-    const { id: userId, fullName: userName, photoUrl } = req.user;
+    const userId = req.user.id || req.user.sub;
+    const userName = req.user.fullName || 'Unknown';
+    const photoUrl = req.user.photoUrl;
 
     if (!chatId || !content) {
       return res.status(400).json({ message: 'Chat ID and content are required' });
@@ -261,7 +263,10 @@ router.post('/mark-read', requireAuth, async (req, res) => {
 // Get unread message count
 router.get('/unread-count', requireAuth, async (req, res) => {
   try {
-    const { organizationId } = req.user;
+    const organizationId = req.user.organizationId || req.user.orgId;
+    if (!organizationId) {
+      return res.status(401).json({ message: 'User organization not found' });
+    }
 
     const chats = await prisma.chat.findMany({
       where: {
