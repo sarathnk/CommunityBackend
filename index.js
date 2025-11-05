@@ -19,6 +19,7 @@ import { router as subscriptionRouter } from './src/routes/subscription.js';
 import { router as paymentRouter } from './src/routes/payment.js';
 import dashboardRouter from './src/routes/dashboard.js';
 import eventFinancialsRouter from './src/routes/eventFinancials.js';
+import { router as incomeRouter } from './src/routes/income.js';
 import path from 'path';
 
 dotenv.config();
@@ -43,6 +44,7 @@ app.use('/api/subscription', subscriptionRouter);
 app.use('/api/payment', paymentRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/event-financials', eventFinancialsRouter);
+app.use('/api/income', incomeRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/logo', logoRouter);
 app.use('/uploads', (req, res, next) => {
