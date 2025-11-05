@@ -5,13 +5,15 @@
   "main": "index.js",
   "scripts": {
     "dev": "node --watch index.js",
+    "dev:full": "npx cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app npm run dev",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev --name init",
-    "prisma:migrate:deploy": "prisma migrate deploy",
-    "prisma:seed": "node prisma/seed.js",
+    "prisma:migrate:deploy": "npx cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app prisma migrate deploy",
+    "prisma:seed": "npx cross-env DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app node prisma/seed.js",
     "start": "node index.js",
     "build": "prisma generate",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "setup": "npm install && npm run prisma:migrate:deploy && npm run prisma:seed && echo Setup complete! Run 'npm run dev:full' to start the server"
   },
   "dependencies": {
     "@prisma/client": "^6.17.0",
@@ -27,6 +29,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "prisma": "^6.17.0"
   },
   "engines": {
