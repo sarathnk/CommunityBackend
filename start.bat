@@ -18,41 +18,37 @@ if not exist "node_modules\" (
     )
 )
 
-REM Check if database exists and is accessible
-echo [INFO] Checking database connection...
-"C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d community_app -c "SELECT 1;" >nul 2>&1
-if errorlevel 1 (
-    echo [WARN] Database 'community_app' not accessible or doesn't exist
-    echo [INFO] Creating database...
-    set PGPASSWORD=postgres
-    "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "CREATE DATABASE community_app;" 2>nul
-    if errorlevel 1 (
-        echo [INFO] Database might already exist, continuing...
-    )
-)
+REM Reset database first
+echo [INFO] Resetting database...
+set PGPASSWORD=postgres
+"C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "DROP DATABASE IF EXISTS community_app;" >nul 2>&1
+"C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "CREATE DATABASE community_app;" >nul 2>&1
+
+REM Delete migration lock files
+if exist "prisma\migrations\migration_lock.toml" del "prisma\migrations\migration_lock.toml" >nul 2>&1
 
 REM Run migrations
 echo [INFO] Running database migrations...
 call npx prisma migrate deploy
 if errorlevel 1 (
     echo [ERROR] Failed to run migrations
-    pause
-    exit /b 1
-)
-
-REM Check if database has data
-echo [INFO] Checking if database needs seeding...
-"C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d community_app -t -c "SELECT COUNT(*) FROM \"User\";" 2>nul | findstr /r "^[1-9]" >nul
-if errorlevel 1 (
-    echo [INFO] Database is empty, seeding with test data...
-    call npm run prisma:seed
+    echo [INFO] Trying to reset Prisma migrations...
+    call npx prisma migrate resolve --rolled-back 20251105162205_add_income_description_and_expense_table
+    call npx prisma migrate deploy
     if errorlevel 1 (
-        echo [ERROR] Failed to seed database
+        echo [ERROR] Failed to run migrations after retry
         pause
         exit /b 1
     )
-) else (
-    echo [INFO] Database already has data, skipping seed
+)
+
+REM Seed the database
+echo [INFO] Seeding database with test data...
+call npm run prisma:seed
+if errorlevel 1 (
+    echo [ERROR] Failed to seed database
+    pause
+    exit /b 1
 )
 
 echo.
