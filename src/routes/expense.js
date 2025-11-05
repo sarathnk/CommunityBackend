@@ -4,7 +4,7 @@ import { prisma } from '../lib/prisma.js';
 
 export const router = Router();
 
-// GET /api/income - List all income records with pagination and filtering
+// GET /api/expense - List all expense records with pagination and filtering
 router.get('/', requireAuth, async (req, res) => {
   try {
     // Extract and validate query parameters
@@ -12,7 +12,6 @@ router.get('/', requireAuth, async (req, res) => {
     const limit = Math.min(Math.max(parseInt(String(req.query.limit || '20')) || 20, 1), 100);
     const cursor = req.query.cursor ? parseInt(String(req.query.cursor)) : undefined;
     const eventId = req.query.eventId ? String(req.query.eventId) : undefined;
-    const paidStatus = req.query.paidStatus ? String(req.query.paidStatus) : undefined;
     const approveStatus = req.query.approveStatus ? String(req.query.approveStatus) : undefined;
 
     // Get user's organization context
@@ -25,11 +24,10 @@ router.get('/', requireAuth, async (req, res) => {
     const where = {
       organizationId: organizationId,
       ...(eventId ? { eventId } : {}),
-      ...(paidStatus ? { paidStatus } : {}),
       ...(approveStatus ? { approveStatus } : {}),
       ...(q ? {
         OR: [
-          { receiptNumber: { contains: q, mode: 'insensitive' } },
+          { billNumber: { contains: q, mode: 'insensitive' } },
           { event: { title: { contains: q, mode: 'insensitive' } } },
         ]
       } : {}),
@@ -59,7 +57,7 @@ router.get('/', requireAuth, async (req, res) => {
     };
 
     // Execute query
-    const list = await prisma.income.findMany(query);
+    const list = await prisma.expense.findMany(query);
 
     // Calculate pagination
     const hasMore = list.length > limit;
@@ -68,7 +66,7 @@ router.get('/', requireAuth, async (req, res) => {
 
     return res.json({ items, nextCursor });
   } catch (error) {
-    console.error('[GET /api/income] Error:', error);
+    console.error('[GET /api/expense] Error:', error);
     return res.status(500).json({
       message: 'Server error',
       error: error.message
@@ -76,7 +74,7 @@ router.get('/', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/income/stats - Get income statistics
+// GET /api/expense/stats - Get expense statistics
 router.get('/stats', requireAuth, async (req, res) => {
   try {
     const organizationId = req.user.organizationId || req.user.orgId;
@@ -91,8 +89,8 @@ router.get('/stats', requireAuth, async (req, res) => {
       ...(eventId ? { eventId } : {}),
     };
 
-    // Get total income (only approved)
-    const approvedIncome = await prisma.income.aggregate({
+    // Get total expense (only approved)
+    const approvedExpense = await prisma.expense.aggregate({
       where: {
         ...where,
         approveStatus: 'Approved',
@@ -103,8 +101,8 @@ router.get('/stats', requireAuth, async (req, res) => {
       _count: true,
     });
 
-    // Get pending income
-    const pendingIncome = await prisma.income.aggregate({
+    // Get pending expense
+    const pendingExpense = await prisma.expense.aggregate({
       where: {
         ...where,
         approveStatus: 'Pending',
@@ -115,35 +113,34 @@ router.get('/stats', requireAuth, async (req, res) => {
       _count: true,
     });
 
-    // Get paid vs unpaid
-    const paidCount = await prisma.income.count({
+    // Get declined expense
+    const declinedExpense = await prisma.expense.aggregate({
       where: {
         ...where,
-        paidStatus: 'Paid',
+        approveStatus: 'Declined',
       },
-    });
-
-    const unpaidCount = await prisma.income.count({
-      where: {
-        ...where,
-        paidStatus: 'Pending',
+      _sum: {
+        amount: true,
       },
+      _count: true,
     });
 
     return res.json({
-      approvedIncome: {
-        total: approvedIncome._sum.amount || 0,
-        count: approvedIncome._count,
+      approvedExpense: {
+        total: approvedExpense._sum.amount || 0,
+        count: approvedExpense._count,
       },
-      pendingIncome: {
-        total: pendingIncome._sum.amount || 0,
-        count: pendingIncome._count,
+      pendingExpense: {
+        total: pendingExpense._sum.amount || 0,
+        count: pendingExpense._count,
       },
-      paidCount,
-      unpaidCount,
+      declinedExpense: {
+        total: declinedExpense._sum.amount || 0,
+        count: declinedExpense._count,
+      },
     });
   } catch (error) {
-    console.error('[GET /api/income/stats] Error:', error);
+    console.error('[GET /api/expense/stats] Error:', error);
     return res.status(500).json({
       message: 'Server error',
       error: error.message
@@ -151,14 +148,14 @@ router.get('/stats', requireAuth, async (req, res) => {
   }
 });
 
-// GET /api/income/:id - Get single income record by ID
+// GET /api/expense/:id - Get single expense record by ID
 router.get('/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params;
-    const incomeId = parseInt(id);
+    const expenseId = parseInt(id);
 
-    if (isNaN(incomeId)) {
-      return res.status(400).json({ message: 'Invalid income ID' });
+    if (isNaN(expenseId)) {
+      return res.status(400).json({ message: 'Invalid expense ID' });
     }
 
     const organizationId = req.user.organizationId || req.user.orgId;
@@ -166,10 +163,10 @@ router.get('/:id', requireAuth, async (req, res) => {
       return res.status(401).json({ message: 'User organization not found' });
     }
 
-    // Find income record in user's organization
-    const income = await prisma.income.findFirst({
+    // Find expense record in user's organization
+    const expense = await prisma.expense.findFirst({
       where: {
-        id: incomeId,
+        id: expenseId,
         organizationId: organizationId,
       },
       include: {
@@ -190,13 +187,13 @@ router.get('/:id', requireAuth, async (req, res) => {
       },
     });
 
-    if (!income) {
-      return res.status(404).json({ message: 'Income record not found' });
+    if (!expense) {
+      return res.status(404).json({ message: 'Expense record not found' });
     }
 
-    return res.json(income);
+    return res.json(expense);
   } catch (error) {
-    console.error('[GET /api/income/:id] Error:', error);
+    console.error('[GET /api/expense/:id] Error:', error);
     return res.status(500).json({
       message: 'Server error',
       error: error.message
@@ -204,16 +201,15 @@ router.get('/:id', requireAuth, async (req, res) => {
   }
 });
 
-// POST /api/income - Create new income record
-router.post('/', requireAuth, requirePermission('income.write'), async (req, res) => {
+// POST /api/expense - Create new expense record
+router.post('/', requireAuth, requirePermission('expense.write'), async (req, res) => {
   try {
     const {
-      receiptPic,
-      receiptNumber,
+      billPic,
+      billNumber,
       amount,
       description,
       eventId,
-      paidStatus,
       approveStatus,
       date,
       time,
@@ -255,17 +251,9 @@ router.post('/', requireAuth, requirePermission('income.write'), async (req, res
     }
 
     // Validate enum values
-    const validPaidStatuses = ['Pending', 'Paid'];
     const validApproveStatuses = ['Approved', 'Declined', 'Pending'];
 
-    const finalPaidStatus = paidStatus || 'Pending';
     const finalApproveStatus = approveStatus || 'Pending';
-
-    if (!validPaidStatuses.includes(finalPaidStatus)) {
-      return res.status(400).json({
-        message: `Invalid paidStatus. Must be one of: ${validPaidStatuses.join(', ')}`
-      });
-    }
 
     if (!validApproveStatuses.includes(finalApproveStatus)) {
       return res.status(400).json({
@@ -273,16 +261,15 @@ router.post('/', requireAuth, requirePermission('income.write'), async (req, res
       });
     }
 
-    // Create income record
-    const income = await prisma.income.create({
+    // Create expense record
+    const expense = await prisma.expense.create({
       data: {
-        receiptPic: receiptPic || null,
-        receiptNumber: receiptNumber || null,
+        billPic: billPic || null,
+        billNumber: billNumber || null,
         amount: numAmount,
         description: description || null,
         eventId,
         organizationId,
-        paidStatus: finalPaidStatus,
         approveStatus: finalApproveStatus,
         approvePersonId: null,
         date: new Date(date),
@@ -298,9 +285,9 @@ router.post('/', requireAuth, requirePermission('income.write'), async (req, res
       },
     });
 
-    return res.status(201).json(income);
+    return res.status(201).json(expense);
   } catch (error) {
-    console.error('[POST /api/income] Error:', error);
+    console.error('[POST /api/expense] Error:', error);
 
     // Handle Prisma-specific errors
     if (error.code && error.code.startsWith('P')) {
@@ -317,23 +304,22 @@ router.post('/', requireAuth, requirePermission('income.write'), async (req, res
   }
 });
 
-// PUT /api/income/:id - Update income record
-router.put('/:id', requireAuth, requirePermission('income.write'), async (req, res) => {
+// PUT /api/expense/:id - Update expense record
+router.put('/:id', requireAuth, requirePermission('expense.write'), async (req, res) => {
   try {
     const { id } = req.params;
-    const incomeId = parseInt(id);
+    const expenseId = parseInt(id);
 
-    if (isNaN(incomeId)) {
-      return res.status(400).json({ message: 'Invalid income ID' });
+    if (isNaN(expenseId)) {
+      return res.status(400).json({ message: 'Invalid expense ID' });
     }
 
     const {
-      receiptPic,
-      receiptNumber,
+      billPic,
+      billNumber,
       amount,
       description,
       eventId,
-      paidStatus,
       approveStatus,
       date,
       time,
@@ -345,20 +331,20 @@ router.put('/:id', requireAuth, requirePermission('income.write'), async (req, r
       return res.status(401).json({ message: 'User organization not found' });
     }
 
-    // Find existing income record
-    const existingIncome = await prisma.income.findFirst({
+    // Find existing expense record
+    const existingExpense = await prisma.expense.findFirst({
       where: {
-        id: incomeId,
+        id: expenseId,
         organizationId: organizationId,
       },
     });
 
-    if (!existingIncome) {
-      return res.status(404).json({ message: 'Income record not found' });
+    if (!existingExpense) {
+      return res.status(404).json({ message: 'Expense record not found' });
     }
 
     // Validate amount if provided
-    let finalAmount = existingIncome.amount;
+    let finalAmount = existingExpense.amount;
     if (amount !== undefined) {
       const numAmount = parseFloat(amount);
       if (isNaN(numAmount) || numAmount <= 0) {
@@ -370,7 +356,7 @@ router.put('/:id', requireAuth, requirePermission('income.write'), async (req, r
     }
 
     // Verify event if provided
-    let finalEventId = existingIncome.eventId;
+    let finalEventId = existingExpense.eventId;
     if (eventId !== undefined) {
       const event = await prisma.event.findFirst({
         where: {
@@ -388,17 +374,9 @@ router.put('/:id', requireAuth, requirePermission('income.write'), async (req, r
     }
 
     // Validate enum values if provided
-    const validPaidStatuses = ['Pending', 'Paid'];
     const validApproveStatuses = ['Approved', 'Declined', 'Pending'];
 
-    const finalPaidStatus = paidStatus !== undefined ? paidStatus : existingIncome.paidStatus;
-    const finalApproveStatus = approveStatus !== undefined ? approveStatus : existingIncome.approveStatus;
-
-    if (!validPaidStatuses.includes(finalPaidStatus)) {
-      return res.status(400).json({
-        message: `Invalid paidStatus. Must be one of: ${validPaidStatuses.join(', ')}`
-      });
-    }
+    const finalApproveStatus = approveStatus !== undefined ? approveStatus : existingExpense.approveStatus;
 
     if (!validApproveStatuses.includes(finalApproveStatus)) {
       return res.status(400).json({
@@ -408,20 +386,19 @@ router.put('/:id', requireAuth, requirePermission('income.write'), async (req, r
 
     // Build update data
     const updateData = {
-      receiptPic: receiptPic !== undefined ? receiptPic : existingIncome.receiptPic,
-      receiptNumber: receiptNumber !== undefined ? receiptNumber : existingIncome.receiptNumber,
+      billPic: billPic !== undefined ? billPic : existingExpense.billPic,
+      billNumber: billNumber !== undefined ? billNumber : existingExpense.billNumber,
       amount: finalAmount,
-      description: description !== undefined ? description : existingIncome.description,
+      description: description !== undefined ? description : existingExpense.description,
       eventId: finalEventId,
-      paidStatus: finalPaidStatus,
       approveStatus: finalApproveStatus,
-      date: date !== undefined ? new Date(date) : existingIncome.date,
-      time: time !== undefined ? new Date(`1970-01-01T${time}`) : existingIncome.time,
+      date: date !== undefined ? new Date(date) : existingExpense.date,
+      time: time !== undefined ? new Date(`1970-01-01T${time}`) : existingExpense.time,
     };
 
-    // Update income record
-    const updated = await prisma.income.update({
-      where: { id: incomeId },
+    // Update expense record
+    const updated = await prisma.expense.update({
+      where: { id: expenseId },
       data: updateData,
       include: {
         event: {
@@ -435,7 +412,7 @@ router.put('/:id', requireAuth, requirePermission('income.write'), async (req, r
 
     return res.json(updated);
   } catch (error) {
-    console.error('[PUT /api/income/:id] Error:', error);
+    console.error('[PUT /api/expense/:id] Error:', error);
 
     // Handle Prisma-specific errors
     if (error.code && error.code.startsWith('P')) {
@@ -452,14 +429,14 @@ router.put('/:id', requireAuth, requirePermission('income.write'), async (req, r
   }
 });
 
-// PATCH /api/income/:id/approve - Approve or decline income record
-router.patch('/:id/approve', requireAuth, requirePermission('income.write'), async (req, res) => {
+// PATCH /api/expense/:id/approve - Approve or decline expense record
+router.patch('/:id/approve', requireAuth, requirePermission('expense.write'), async (req, res) => {
   try {
     const { id } = req.params;
-    const incomeId = parseInt(id);
+    const expenseId = parseInt(id);
 
-    if (isNaN(incomeId)) {
-      return res.status(400).json({ message: 'Invalid income ID' });
+    if (isNaN(expenseId)) {
+      return res.status(400).json({ message: 'Invalid expense ID' });
     }
 
     const { approveStatus } = req.body;
@@ -478,21 +455,21 @@ router.patch('/:id/approve', requireAuth, requirePermission('income.write'), asy
       return res.status(401).json({ message: 'User organization not found' });
     }
 
-    // Find existing income record
-    const existingIncome = await prisma.income.findFirst({
+    // Find existing expense record
+    const existingExpense = await prisma.expense.findFirst({
       where: {
-        id: incomeId,
+        id: expenseId,
         organizationId: organizationId,
       },
     });
 
-    if (!existingIncome) {
-      return res.status(404).json({ message: 'Income record not found' });
+    if (!existingExpense) {
+      return res.status(404).json({ message: 'Expense record not found' });
     }
 
     // Update approval status and approver
-    const updated = await prisma.income.update({
-      where: { id: incomeId },
+    const updated = await prisma.expense.update({
+      where: { id: expenseId },
       data: {
         approveStatus,
         approvePersonId: req.user.sub,
@@ -509,7 +486,7 @@ router.patch('/:id/approve', requireAuth, requirePermission('income.write'), asy
 
     return res.json(updated);
   } catch (error) {
-    console.error('[PATCH /api/income/:id/approve] Error:', error);
+    console.error('[PATCH /api/expense/:id/approve] Error:', error);
 
     // Handle Prisma-specific errors
     if (error.code && error.code.startsWith('P')) {
@@ -526,24 +503,14 @@ router.patch('/:id/approve', requireAuth, requirePermission('income.write'), asy
   }
 });
 
-// PATCH /api/income/:id/paid - Mark income as paid or pending
-router.patch('/:id/paid', requireAuth, requirePermission('income.write'), async (req, res) => {
+// DELETE /api/expense/:id - Delete expense record
+router.delete('/:id', requireAuth, requirePermission('expense.write'), async (req, res) => {
   try {
     const { id } = req.params;
-    const incomeId = parseInt(id);
+    const expenseId = parseInt(id);
 
-    if (isNaN(incomeId)) {
-      return res.status(400).json({ message: 'Invalid income ID' });
-    }
-
-    const { paidStatus } = req.body;
-
-    // Validate paid status
-    const validPaidStatuses = ['Pending', 'Paid'];
-    if (!paidStatus || !validPaidStatuses.includes(paidStatus)) {
-      return res.status(400).json({
-        message: `Invalid paidStatus. Must be one of: ${validPaidStatuses.join(', ')}`
-      });
+    if (isNaN(expenseId)) {
+      return res.status(400).json({ message: 'Invalid expense ID' });
     }
 
     // Get organization context
@@ -552,89 +519,26 @@ router.patch('/:id/paid', requireAuth, requirePermission('income.write'), async 
       return res.status(401).json({ message: 'User organization not found' });
     }
 
-    // Find existing income record
-    const existingIncome = await prisma.income.findFirst({
+    // Find existing expense record
+    const existingExpense = await prisma.expense.findFirst({
       where: {
-        id: incomeId,
+        id: expenseId,
         organizationId: organizationId,
       },
     });
 
-    if (!existingIncome) {
-      return res.status(404).json({ message: 'Income record not found' });
+    if (!existingExpense) {
+      return res.status(404).json({ message: 'Expense record not found' });
     }
 
-    // Update paid status
-    const updated = await prisma.income.update({
-      where: { id: incomeId },
-      data: {
-        paidStatus,
-      },
-      include: {
-        event: {
-          select: {
-            id: true,
-            title: true,
-          }
-        },
-      },
-    });
-
-    return res.json(updated);
-  } catch (error) {
-    console.error('[PATCH /api/income/:id/paid] Error:', error);
-
-    // Handle Prisma-specific errors
-    if (error.code && error.code.startsWith('P')) {
-      return res.status(400).json({
-        message: 'Database error',
-        error: error.message
-      });
-    }
-
-    return res.status(500).json({
-      message: 'Server error',
-      error: error.message
-    });
-  }
-});
-
-// DELETE /api/income/:id - Delete income record
-router.delete('/:id', requireAuth, requirePermission('income.write'), async (req, res) => {
-  try {
-    const { id } = req.params;
-    const incomeId = parseInt(id);
-
-    if (isNaN(incomeId)) {
-      return res.status(400).json({ message: 'Invalid income ID' });
-    }
-
-    // Get organization context
-    const organizationId = req.user.organizationId || req.user.orgId;
-    if (!organizationId) {
-      return res.status(401).json({ message: 'User organization not found' });
-    }
-
-    // Find existing income record
-    const existingIncome = await prisma.income.findFirst({
-      where: {
-        id: incomeId,
-        organizationId: organizationId,
-      },
-    });
-
-    if (!existingIncome) {
-      return res.status(404).json({ message: 'Income record not found' });
-    }
-
-    // Delete income record
-    await prisma.income.delete({
-      where: { id: incomeId },
+    // Delete expense record
+    await prisma.expense.delete({
+      where: { id: expenseId },
     });
 
     return res.status(204).send();
   } catch (error) {
-    console.error('[DELETE /api/income/:id] Error:', error);
+    console.error('[DELETE /api/expense/:id] Error:', error);
 
     // Handle Prisma-specific errors
     if (error.code && error.code.startsWith('P')) {

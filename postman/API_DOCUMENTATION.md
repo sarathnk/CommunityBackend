@@ -16,6 +16,7 @@
 - [Dashboard](#dashboard)
 - [Event Financials](#event-financials)
 - [Income](#income)
+- [Expense](#expense)
 - [Subscription](#subscription)
 - [Payment](#payment)
 - [Upload](#upload)
@@ -1124,6 +1125,7 @@ Create a new income record.
   "receiptPic": "/uploads/receipt.jpg",
   "receiptNumber": "RCT-2025-001",
   "amount": 5000,
+  "description": "Payment for event registration",
   "eventId": "event-id-here",
   "paidStatus": "Paid",
   "approveStatus": "Pending",
@@ -1216,6 +1218,189 @@ Delete an income record.
 
 **URL Parameters**:
 - `incomeId` (number, required) - Income record ID
+
+**Response**: 204 No Content
+
+---
+
+## Expense
+
+### List Expense Records
+List all expense records with filtering.
+
+**Endpoint**: `GET /api/expense`
+
+**Auth Required**: Yes
+
+**Query Parameters**:
+- `limit` (number, optional) - Items per page (default: 20, max: 100)
+- `cursor` (number, optional) - Cursor for pagination
+- `eventId` (string, optional) - Filter by event
+- `approveStatus` (string, optional) - Filter by approval status: Approved, Declined, Pending
+- `q` (string, optional) - Search by bill number or event title
+
+**Response**:
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "billPic": "/uploads/bill.jpg",
+      "billNumber": "BILL-2025-001",
+      "amount": 3000,
+      "description": "Venue rental for event",
+      "eventId": "event-id",
+      "organizationId": "org-id",
+      "approveStatus": "Approved",
+      "approvePersonId": "user-id",
+      "date": "2025-11-05T00:00:00.000Z",
+      "time": "1970-01-01T14:30:00.000Z",
+      "createdAt": "2025-11-05T00:00:00.000Z",
+      "updatedAt": "2025-11-05T00:00:00.000Z",
+      "event": {
+        "id": "event-id",
+        "title": "Annual Conference",
+        "startDate": "2025-12-15T00:00:00.000Z"
+      },
+      "organization": {
+        "id": "org-id",
+        "name": "Tech Community Hub"
+      }
+    }
+  ],
+  "nextCursor": 2
+}
+```
+
+---
+
+### Get Expense Statistics
+Get expense statistics and totals.
+
+**Endpoint**: `GET /api/expense/stats`
+
+**Auth Required**: Yes
+
+**Query Parameters**:
+- `eventId` (string, optional) - Filter by event
+
+**Response**:
+```json
+{
+  "approvedExpense": {
+    "total": 30000,
+    "count": 10
+  },
+  "pendingExpense": {
+    "total": 8000,
+    "count": 3
+  },
+  "declinedExpense": {
+    "total": 2000,
+    "count": 1
+  }
+}
+```
+
+---
+
+### Get Expense Record
+Get single expense record details.
+
+**Endpoint**: `GET /api/expense/:expenseId`
+
+**Auth Required**: Yes
+
+**URL Parameters**:
+- `expenseId` (number, required) - Expense record ID
+
+**Response**: Returns single expense record with event and organization details.
+
+---
+
+### Create Expense Record
+Create a new expense record.
+
+**Endpoint**: `POST /api/expense`
+
+**Auth Required**: Yes (requires `expense.write` permission)
+
+**Request Body**:
+```json
+{
+  "billPic": "/uploads/bill.jpg",
+  "billNumber": "BILL-2025-001",
+  "amount": 3000,
+  "description": "Venue rental for event",
+  "eventId": "event-id-here",
+  "approveStatus": "Pending",
+  "date": "2025-11-05",
+  "time": "14:30:00"
+}
+```
+
+**Response**: Returns created expense record.
+
+**Notes**:
+- Amount must be positive
+- Event must exist and belong to organization
+- Valid approveStatus values: Approved, Declined, Pending
+- billPic, billNumber, and description are optional
+
+---
+
+### Update Expense Record
+Update expense record.
+
+**Endpoint**: `PUT /api/expense/:expenseId`
+
+**Auth Required**: Yes (requires `expense.write` permission)
+
+**URL Parameters**:
+- `expenseId` (number, required) - Expense record ID
+
+**Request Body**:
+```json
+{
+  "amount": 3500,
+  "approveStatus": "Approved"
+}
+```
+
+**Response**: Returns updated expense record.
+
+---
+
+### Approve/Decline Expense
+Approve or decline expense record.
+
+**Endpoint**: `PATCH /api/expense/:expenseId/approve`
+
+**Auth Required**: Yes (requires `expense.write` permission)
+
+**URL Parameters**:
+- `expenseId` (number, required) - Expense record ID
+
+**Request Body**:
+```json
+{
+  "approveStatus": "Approved"
+}
+```
+
+**Response**: Returns updated expense record with approver information.
+
+---
+
+### Delete Expense Record
+Delete an expense record.
+
+**Endpoint**: `DELETE /api/expense/:expenseId`
+
+**Auth Required**: Yes (requires `expense.write` permission)
+
+**URL Parameters**:
+- `expenseId` (number, required) - Expense record ID
 
 **Response**: 204 No Content
 
@@ -1474,6 +1659,7 @@ The following permissions are used throughout the API:
 - `announcements.write` - Create announcements
 - `elections.write` - Manage elections and candidates
 - `income.write` - Manage income records
+- `expense.write` - Manage expense records
 - `read` - Basic read access
 
 ---
@@ -1530,6 +1716,12 @@ POST /api/elections
 ```
 POST /api/income
 GET /api/income/stats
+```
+
+### 10. Test Expense Management
+```
+POST /api/expense
+GET /api/expense/stats
 ```
 
 ---
