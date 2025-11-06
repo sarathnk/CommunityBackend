@@ -34,14 +34,21 @@ router.get('/', requireAuth, requirePermission('members.read'), async (req, res)
     return res.status(400).json({ message: 'communityId is required' });
   }
 
-  // Build where clause: always scoped to the resolved community
+  // Build where clause: users primarily in org OR with extra membership in org
   const where = {
-    organizationId: communityId,
+    OR: [
+      { organizationId: communityId },
+      { extraMemberships: { some: { organizationId: communityId } } }
+    ],
     ...(q
       ? {
-          OR: [
-            { fullName: { contains: q, mode: 'insensitive' } },
-            { phoneNumber: { contains: q, mode: 'insensitive' } },
+          AND: [
+            {
+              OR: [
+                { fullName: { contains: q, mode: 'insensitive' } },
+                { phoneNumber: { contains: q, mode: 'insensitive' } },
+              ],
+            },
           ],
         }
       : {}),
@@ -54,7 +61,12 @@ router.get('/', requireAuth, requirePermission('members.read'), async (req, res)
       fullName: true, 
       phoneNumber: true, 
       photoUrl: true,
-      role: { select: { name: true } },
+      role: { select: { id: true, name: true } },
+      organizationId: true,
+      extraMemberships: {
+        where: { organizationId: communityId },
+        select: { role: { select: { id: true, name: true } } }
+      }
     },
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
@@ -66,13 +78,18 @@ router.get('/', requireAuth, requirePermission('members.read'), async (req, res)
   
   const users = await prisma.user.findMany(query);
   const hasMore = users.length > limit;
-  const items = users.slice(0, limit).map(u => ({ 
-    id: u.id, 
-    fullName: u.fullName, 
-    phoneNumber: u.phoneNumber, 
-    photoUrl: u.photoUrl,
-    role: u.role.name,
-  }));
+  const items = users.slice(0, limit).map(u => {
+    const membershipRole = u.organizationId === communityId
+      ? u.role?.name
+      : u.extraMemberships?.[0]?.role?.name;
+    return {
+      id: u.id,
+      fullName: u.fullName,
+      phoneNumber: u.phoneNumber,
+      photoUrl: u.photoUrl,
+      role: membershipRole || u.role?.name || null,
+    };
+  });
   const nextCursor = hasMore ? items[items.length - 1]?.id : null;
   return res.json({ items, nextCursor, totalCount });
 });
@@ -99,18 +116,6 @@ router.post('/', requireAuth, requirePermission('members.write'), async (req, re
       normalizedPhone = '+91' + normalizedPhone;
     }
 
-    // Check if phone number already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { phoneNumber: normalizedPhone }
-    });
-
-    if (existingUser) {
-      return res.status(400).json({ 
-        message: 'User with this phone number already exists',
-        phoneNumber: normalizedPhone
-      });
-    }
-
     // Ensure role belongs to requester's organization
     const role = await prisma.role.findFirst({ 
       where: { id: roleId, organizationId: organizationId } 
@@ -123,7 +128,46 @@ router.post('/', requireAuth, requirePermission('members.write'), async (req, re
         organizationId: organizationId
       });
     }
-    
+
+    // Check if a user with the phone number already exists (possibly in another org)
+    const existingUser = await prisma.user.findUnique({ where: { phoneNumber: normalizedPhone } });
+
+    if (existingUser) {
+      if (existingUser.organizationId === organizationId) {
+        return res.status(400).json({ 
+          message: 'User already exists in this community',
+          phoneNumber: normalizedPhone
+        });
+      }
+
+      // Check if user already has extra membership in this org
+      const alreadyMember = await prisma.userOrganization.findFirst({
+        where: { userId: existingUser.id, organizationId }
+      });
+      if (alreadyMember) {
+        return res.status(400).json({ message: 'User already exists in this community', phoneNumber: normalizedPhone });
+      }
+
+      // Create extra membership linking the user to this organization with the provided role
+      const membership = await prisma.userOrganization.create({
+        data: {
+          userId: existingUser.id,
+          organizationId,
+          roleId,
+        },
+        select: {
+          user: { select: { id: true, fullName: true, phoneNumber: true } }
+        }
+      });
+
+      return res.status(200).json({
+        id: membership.user.id,
+        fullName: membership.user.fullName,
+        phoneNumber: membership.user.phoneNumber,
+        message: 'User added to this community'
+      });
+    }
+
     // Generate a default password if none provided
     const defaultPassword = password || 'Welcome123!';
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
