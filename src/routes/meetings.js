@@ -4,12 +4,13 @@ import { prisma } from '../lib/prisma.js';
 
 export const router = Router();
 
+// GET /api/meetings
 router.get('/', requireAuth, requirePermission('events.read'), async (req, res) => {
   try {
     const q = String(req.query.q || '').trim();
     const limit = Math.min(Math.max(parseInt(String(req.query.limit || '20')) || 20, 1), 100);
 
-    // Accept opaque cursor (base64 JSON { id })
+    // Opaque cursor: base64(JSON { id })
     let cursorId;
     if (req.query.cursor) {
       try {
@@ -17,35 +18,32 @@ router.get('/', requireAuth, requirePermission('events.read'), async (req, res) 
         const parsed = JSON.parse(decoded);
         cursorId = typeof parsed?.id === 'string' ? parsed.id : undefined;
       } catch (_) {
-        // Ignore invalid cursor; treat as no cursor
         cursorId = undefined;
       }
     }
 
-    // Accept organizationId (required). Keep backward compatibility with communityId if provided.
+    // organizationId is required (back-compat communityId)
     const requestedOrganizationId = (req.query.organizationId || req.query.communityId)
       ? String(req.query.organizationId || req.query.communityId).trim()
       : null;
 
-    // Load requester and role to determine super admin
+    // requester & permissions
     const requester = await prisma.user.findUnique({ where: { id: req.user.sub }, include: { role: true } });
-    if (!requester) return res.status(401).json({ message: 'User not found' });
+    if (!requester) return res.status(401).json({ message: 'Unauthorized' });
 
     const tokenOrgId = req.user.organizationId || req.user.orgId || null;
     const isSuperAdmin = Array.isArray(requester.role?.permissions) && requester.role.permissions.includes('*');
 
-    let organizationId = requestedOrganizationId || tokenOrgId || null;
+    const organizationId = requestedOrganizationId || tokenOrgId || null;
 
-    // Validate organization scoping
     if (requestedOrganizationId && tokenOrgId && !isSuperAdmin && requestedOrganizationId !== tokenOrgId) {
-      return res.status(403).json({ message: 'User not permitted to access organizationId' });
+      return res.status(403).json({ message: 'Forbidden (organization out of scope)' });
     }
-
     if (!organizationId) {
-      return res.status(400).json({ message: 'Missing or invalid organizationId' });
+      return res.status(400).json({ message: 'Missing/invalid organizationId' });
     }
 
-    // Build where clause with search across title/description/location
+    // NOTE: Meetings share the Event storage model
     const where = {
       organizationId,
       ...(q
@@ -59,11 +57,11 @@ router.get('/', requireAuth, requirePermission('events.read'), async (req, res) 
         : {}),
     };
 
-    const query = {
+    const events = await prisma.event.findMany({
       where,
       orderBy: [
         { startDate: 'desc' },
-        { id: 'desc' }, // stable tiebreaker
+        { id: 'desc' },
       ],
       take: limit + 1,
       ...(cursorId ? { cursor: { id: cursorId }, skip: 1 } : {}),
@@ -74,62 +72,22 @@ router.get('/', requireAuth, requirePermission('events.read'), async (req, res) 
         location: true,
         startDate: true,
         endDate: true,
-        imageUrl: true,
         attendeesCount: true,
-        organizerId: true,
-        organizerName: true,
         createdAt: true,
       },
-    };
+    });
 
-    const events = await prisma.event.findMany(query);
     const hasMore = events.length > limit;
-    const sliced = events.slice(0, limit);
-
-    const items = sliced.map((e) => ({
-      id: e.id,
-      title: e.title,
-      description: e.description,
-      location: e.location,
-      startDate: e.startDate,
-      endDate: e.endDate,
-      imageUrl: e.imageUrl,
-      attendeesCount: e.attendeesCount,
-      organizerId: e.organizerId,
-      organizerName: e.organizerName,
-      createdAt: e.createdAt,
-    }));
-
-    const nextCursor = hasMore && sliced.length
-      ? Buffer.from(JSON.stringify({ id: sliced[sliced.length - 1].id }), 'utf8').toString('base64')
+    const items = events.slice(0, limit);
+    const nextCursor = hasMore && items.length
+      ? Buffer.from(JSON.stringify({ id: items[items.length - 1].id }), 'utf8').toString('base64')
       : null;
 
     return res.json({ items, nextCursor });
   } catch (err) {
-    console.error('[GET /api/events] Error:', err);
+    console.error('[GET /api/meetings] Error:', err);
     return res.status(500).json({ message: 'Server error' });
   }
-});
-
-router.post('/', requireAuth, requirePermission('events.write'), async (req, res) => {
-  const { title, description, location, startDate, endDate, imageUrl } = req.body;
-  if (!title || !description || !location || !startDate || !endDate) {
-    return res.status(400).json({ message: 'Invalid payload' });
-  }
-  const evt = await prisma.event.create({
-    data: {
-      title,
-      description,
-      location,
-      startDate: new Date(startDate),
-      endDate: new Date(endDate),
-      imageUrl,
-      organizerId: req.user.sub,
-      organizerName: 'Admin',
-      organizationId: req.user.organizationId || req.user.orgId,
-    },
-  });
-  return res.status(201).json(evt);
 });
 
 
