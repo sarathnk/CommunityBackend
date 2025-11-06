@@ -18,6 +18,7 @@ model Organization {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   users       User[]
+  userMemberships UserOrganization[]
   roles       Role[]
   events      Event[]
   announcements Announcement[]
@@ -35,6 +36,7 @@ model Role {
   organization   Organization @relation(fields: [organizationId], references: [id])
   organizationId String
   users          User[]
+  userMemberships UserOrganization[]
   createdAt      DateTime @default(now())
 }
 
@@ -51,6 +53,21 @@ model User {
   roleId         String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  extraMemberships UserOrganization[]
+}
+
+// Join model to allow a user to be part of multiple organizations with possibly different roles
+model UserOrganization {
+  id             String   @id @default(cuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  role           Role     @relation(fields: [roleId], references: [id])
+  roleId         String
+  createdAt      DateTime @default(now())
+
+  @@unique([userId, organizationId])
 }
 
 model Event {
