@@ -61,6 +61,7 @@ router.get('/', requireAuth, requirePermission('members.read'), async (req, res)
       fullName: true, 
       phoneNumber: true, 
       photoUrl: true,
+      createdAt: true,
       role: { select: { id: true, name: true } },
       organizationId: true,
       extraMemberships: {
@@ -88,6 +89,7 @@ router.get('/', requireAuth, requirePermission('members.read'), async (req, res)
       phoneNumber: u.phoneNumber,
       photoUrl: u.photoUrl,
       role: membershipRole || u.role?.name || null,
+      createdAt: u.createdAt,
     };
   });
   const nextCursor = hasMore ? items[items.length - 1]?.id : null;
