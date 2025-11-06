@@ -5,30 +5,38 @@ import bcrypt from 'bcryptjs';
 
 export const router = Router();
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requirePermission('members.read'), async (req, res) => {
   const q = String(req.query.q || '').trim();
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || '20')) || 20, 1), 100);
   const cursor = req.query.cursor ? String(req.query.cursor) : undefined;
+  const requestedCommunityId = req.query.communityId ? String(req.query.communityId).trim() : null;
 
-  // Get user's role to check if they're super admin
-  const user = await prisma.user.findUnique({ 
+  // Get requester with role to evaluate permissions/scope
+  const requester = await prisma.user.findUnique({ 
     where: { id: req.user.sub }, 
     include: { role: true } 
   });
-  
-  if (!user) return res.status(401).json({ message: 'User not found' });
+  if (!requester) return res.status(401).json({ message: 'User not found' });
 
-  const organizationId = req.user.organizationId || req.user.orgId;
-  if (!organizationId && !user.role.permissions.includes('*')) {
-    return res.status(401).json({ message: 'User organization not found' });
+  const tokenOrgId = req.user.organizationId || req.user.orgId || null;
+  const isSuperAdmin = requester.role.permissions?.includes('*');
+
+  // Resolve effective community (organization) ID
+  let communityId = requestedCommunityId || tokenOrgId || null;
+
+  // If token is org-scoped, verify requested community matches
+  if (requestedCommunityId && tokenOrgId && !isSuperAdmin && requestedCommunityId !== tokenOrgId) {
+    return res.status(403).json({ message: 'Forbidden: communityId does not match your scope' });
   }
 
-  // Super admin can see all members, others only see their organization
+  // Enforce single-community scoping. If super admin has no default org and no communityId provided, require it.
+  if (!communityId) {
+    return res.status(400).json({ message: 'communityId is required' });
+  }
+
+  // Build where clause: always scoped to the resolved community
   const where = {
-    ...(user.role.permissions.includes('*') 
-      ? {} // Super admin sees all organizations
-      : { organizationId: organizationId } // Regular users see only their org
-    ),
+    organizationId: communityId,
     ...(q
       ? {
           OR: [
@@ -47,10 +55,6 @@ router.get('/', requireAuth, async (req, res) => {
       phoneNumber: true, 
       photoUrl: true,
       role: { select: { name: true } },
-      ...(user.role.permissions.includes('*') 
-        ? { organization: { select: { name: true, type: true } } } // Include org info for super admin
-        : {}
-      )
     },
     orderBy: { createdAt: 'desc' },
     take: limit + 1,
@@ -68,10 +72,6 @@ router.get('/', requireAuth, async (req, res) => {
     phoneNumber: u.phoneNumber, 
     photoUrl: u.photoUrl,
     role: u.role.name,
-    ...(user.role.permissions.includes('*') && u.organization
-      ? { organization: u.organization }
-      : {}
-    )
   }));
   const nextCursor = hasMore ? items[items.length - 1]?.id : null;
   return res.json({ items, nextCursor, totalCount });

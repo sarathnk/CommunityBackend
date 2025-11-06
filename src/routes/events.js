@@ -4,18 +4,29 @@ import { prisma } from '../lib/prisma.js';
 
 export const router = Router();
 
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', requireAuth, requirePermission('events.read'), async (req, res) => {
   const q = String(req.query.q || '').trim();
   const limit = Math.min(Math.max(parseInt(String(req.query.limit || '20')) || 20, 1), 100);
   const cursor = req.query.cursor ? String(req.query.cursor) : undefined;
+  const requestedCommunityId = req.query.communityId ? String(req.query.communityId).trim() : null;
 
-  const organizationId = req.user.organizationId || req.user.orgId;
-  if (!organizationId) {
-    return res.status(401).json({ message: 'User organization not found' });
+  const requester = await prisma.user.findUnique({ where: { id: req.user.sub }, include: { role: true } });
+  if (!requester) return res.status(401).json({ message: 'User not found' });
+  const tokenOrgId = req.user.organizationId || req.user.orgId || null;
+  const isSuperAdmin = requester.role?.permissions?.includes('*');
+
+  let communityId = requestedCommunityId || tokenOrgId || null;
+
+  if (requestedCommunityId && tokenOrgId && !isSuperAdmin && requestedCommunityId !== tokenOrgId) {
+    return res.status(403).json({ message: 'Forbidden: communityId does not match your scope' });
+  }
+
+  if (!communityId) {
+    return res.status(400).json({ message: 'communityId is required' });
   }
 
   const where = {
-    organizationId: organizationId,
+    organizationId: communityId,
     ...(q ? { OR: [{ title: { contains: q, mode: 'insensitive' } }, { location: { contains: q, mode: 'insensitive' } }] } : {}),
   };
 
