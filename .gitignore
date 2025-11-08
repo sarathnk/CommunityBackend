@@ -14,6 +14,10 @@ lerna-debug.log*
 .env.production.local
 .env.*
 
+# Local development scripts
+package.local.json
+*.local.json
+
 # Database
 *.db
 *.sqlite
