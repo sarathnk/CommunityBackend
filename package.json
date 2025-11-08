@@ -10,6 +10,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "node prisma/seed.js",
     "start": "node index.js",
+    "start:migrate": "npm run prisma:migrate:deploy && node index.js",
     "build": "prisma generate",
     "postinstall": "prisma generate",
     "local:dev": "set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run dev",
