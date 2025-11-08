@@ -2,61 +2,58 @@
 
 This guide explains how to set up and run the project locally.
 
-## Local Scripts
+## Quick Start (Windows)
 
-For local development, create a `package.local.json` file in the project root with your local database configuration:
-
-```json
-{
-  "scripts": {
-    "dev:local": "set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run dev",
-    "prisma:migrate:local": "set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npx prisma migrate deploy",
-    "prisma:seed:local": "set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run prisma:seed",
-    "setup:local": "npm install && npm run prisma:migrate:local && npm run prisma:seed:local"
-  }
-}
-```
-
-**Note for Unix/Mac users**: Replace `set` with `export` and use `&&` instead:
-```json
-{
-  "scripts": {
-    "dev:local": "export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run dev",
-    "prisma:migrate:local": "export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npx prisma migrate deploy",
-    "prisma:seed:local": "export DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run prisma:seed",
-    "setup:local": "npm install && npm run prisma:migrate:local && npm run prisma:seed:local"
-  }
-}
-```
-
-## Running Local Scripts
-
-To run a local script, use the npm-run-script syntax:
+The project includes `local:*` scripts for Windows local development with a default PostgreSQL setup:
 
 ```bash
-npm run --prefix-script-file=package.local.json dev:local
+# First time setup
+npm run local:setup
+
+# Start development server
+npm run local:dev
 ```
 
-Or create a simple batch/shell script to make it easier.
+### Available Local Scripts
 
-## Alternative: Use .env file
+- `npm run local:dev` - Start the development server with local database
+- `npm run local:migrate` - Run database migrations locally
+- `npm run local:seed` - Seed the local database
+- `npm run local:setup` - Complete setup (install, migrate, seed)
 
-Alternatively, you can set your DATABASE_URL in the `.env` file (which is gitignored) and use the standard scripts:
+**Note**: These scripts use `set` command (Windows). For Unix/Mac users, see the alternative approach below.
+
+## Alternative: Use .env file (Recommended for Unix/Mac)
+
+For cross-platform compatibility, set your DATABASE_URL in the `.env` file (which is gitignored):
 
 ```bash
 # .env
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app
 ```
 
-Then simply run:
+Then use the standard scripts:
 ```bash
 npm run dev
+npm run prisma:migrate:deploy
+npm run prisma:seed
 ```
 
 ## First Time Setup
 
 1. Install dependencies: `npm install`
-2. Set up your `.env` file with your local database URL
-3. Run migrations: `npm run prisma:migrate:deploy`
-4. Seed the database: `npm run prisma:seed`
-5. Start the server: `npm run dev`
+2. Choose your approach:
+   - **Windows**: Use `npm run local:setup`
+   - **Unix/Mac**: Create `.env` file and run migrations/seed manually
+3. Start the server with `npm run local:dev` or `npm run dev` (if using .env)
+
+## Database Configuration
+
+The local scripts assume:
+- Host: `localhost`
+- Port: `5432`
+- Database: `community_app`
+- User: `postgres`
+- Password: `postgres`
+
+Modify the scripts in `package.json` or use `.env` file if your setup differs.

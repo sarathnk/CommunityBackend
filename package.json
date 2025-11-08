@@ -11,7 +11,11 @@
     "prisma:seed": "node prisma/seed.js",
     "start": "node index.js",
     "build": "prisma generate",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "local:dev": "set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run dev",
+    "local:migrate": "set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run prisma:migrate:deploy",
+    "local:seed": "set DATABASE_URL=postgresql://postgres:postgres@localhost:5432/community_app && npm run prisma:seed",
+    "local:setup": "npm install && npm run local:migrate && npm run local:seed"
   },
   "dependencies": {
     "@prisma/client": "^6.17.0",
