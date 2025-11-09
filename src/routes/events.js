@@ -86,18 +86,45 @@ router.get('/', requireAuth, requirePermission('events.read'), async (req, res) 
     const hasMore = events.length > limit;
     const sliced = events.slice(0, limit);
 
-    const items = sliced.map((e) => ({
-      id: e.id,
-      title: e.title,
-      description: e.description,
-      location: e.location,
-      startDate: e.startDate,
-      endDate: e.endDate,
-      imageUrl: e.imageUrl,
-      attendeesCount: e.attendeesCount,
-      organizerId: e.organizerId,
-      organizerName: e.organizerName,
-      createdAt: e.createdAt,
+    // Calculate income and expenses for each event from approved records
+    const items = await Promise.all(sliced.map(async (e) => {
+      // Get approved income for this event
+      const approvedIncomes = await prisma.income.aggregate({
+        where: {
+          eventId: e.id,
+          approveStatus: 'Approved',
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+      // Get approved expenses for this event
+      const approvedExpenses = await prisma.expense.aggregate({
+        where: {
+          eventId: e.id,
+          approveStatus: 'Approved',
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+      return {
+        id: e.id,
+        title: e.title,
+        description: e.description,
+        location: e.location,
+        startDate: e.startDate,
+        endDate: e.endDate,
+        imageUrl: e.imageUrl,
+        attendeesCount: e.attendeesCount,
+        organizerId: e.organizerId,
+        organizerName: e.organizerName,
+        createdAt: e.createdAt,
+        income: approvedIncomes._sum.amount || 0,
+        expenses: approvedExpenses._sum.amount || 0,
+      };
     }));
 
     const nextCursor = hasMore && sliced.length

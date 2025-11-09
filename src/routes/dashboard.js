@@ -6,24 +6,18 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 // GET /api/dashboard - Get dashboard statistics
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   try {
-    // For testing, use the Tech Community Hub organization ID
-    const userId = 'cmgvnntie000jv7vw9cteyx1n';
-    const organizationId = 'cmgvnnsu30007v7vw7gf4oca9';
+    // Get user and organization from authenticated request
+    const userId = req.user?.id || req.user?.sub;
+    const organizationId = req.user?.organizationId;
 
     console.log('Dashboard API: Fetching dashboard data for user:', userId, 'org:', organizationId);
-    
-    // First, let's check if the organization exists
-    const orgCheck = await prisma.organization.findFirst({
-      where: { id: organizationId },
-      select: { id: true, name: true }
-    });
-    console.log('Dashboard API: Organization check result:', orgCheck);
-    
-    if (!orgCheck) {
-      console.log('Dashboard API: Organization not found in database for ID:', organizationId);
-      return res.status(404).json({ error: 'Organization not found' });
+
+    // Validate that we have both user and organization
+    if (!userId || !organizationId) {
+      console.log('Dashboard API: Missing user or organization ID from auth token');
+      return res.status(401).json({ error: 'Unauthorized - Missing user or organization information' });
     }
 
     // Get organization details
@@ -38,7 +32,7 @@ router.get('/', async (req, res) => {
     });
 
     if (!organization) {
-      console.log('Dashboard API: Organization not found');
+      console.log('Dashboard API: Organization not found for ID:', organizationId);
       return res.status(404).json({ error: 'Organization not found' });
     }
 

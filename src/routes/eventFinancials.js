@@ -16,12 +16,10 @@ router.get('/', requireAuth, async (req, res) => {
       return res.status(401).json({ message: 'User organization not found' });
     }
 
-    // Get events with financial data
+    // Get all events (we'll calculate financials from income/expense records)
     const events = await prisma.event.findMany({
       where: {
         organizationId: organizationId,
-        budget: { not: null },
-        actualCost: { not: null },
       },
       select: {
         id: true,
@@ -40,47 +38,50 @@ router.get('/', requireAuth, async (req, res) => {
 
     console.log(`Event Financials API: Found ${events.length} events with financial data`);
 
-    // Transform events to include calculated financial data
-    const eventsWithFinancials = events.map(event => {
-      const income = event.budget || 0;
-      const expenses = event.actualCost || 0;
-      const net = income - expenses;
-      const profitMargin = income > 0 ? ((net / income) * 100) : 0;
+    // Transform events to include calculated financial data from approved records
+    const eventsWithFinancials = await Promise.all(events.map(async (event) => {
+      // Get approved income for this event
+      const approvedIncomes = await prisma.income.aggregate({
+        where: {
+          eventId: event.id,
+          approveStatus: 'Approved',
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      });
 
-      // Generate sample breakdown data (in a real app, this would come from separate tables)
+      // Get approved expenses for this event
+      const approvedExpenses = await prisma.expense.aggregate({
+        where: {
+          eventId: event.id,
+          approveStatus: 'Approved',
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      });
+
+      const income = approvedIncomes._sum.amount || 0;
+      const expenses = approvedExpenses._sum.amount || 0;
+
+      // Get income breakdown by category (if you have categories)
+      // For now, using aggregated data
       const incomeBreakdown = [
         {
-          category: 'Member Contributions',
-          amount: Math.round(income * 0.7),
-          percentage: 70.0,
-        },
-        {
-          category: 'Sponsor Donations',
-          amount: Math.round(income * 0.3),
-          percentage: 30.0,
+          category: 'Total Approved Income',
+          amount: Math.round(income),
+          percentage: 100.0,
         },
       ];
 
       const expenseBreakdown = [
         {
-          category: 'Venue',
-          amount: Math.round(expenses * 0.4),
-          percentage: 40.0,
-        },
-        {
-          category: 'Catering',
-          amount: Math.round(expenses * 0.3),
-          percentage: 30.0,
-        },
-        {
-          category: 'Equipment',
-          amount: Math.round(expenses * 0.2),
-          percentage: 20.0,
-        },
-        {
-          category: 'Marketing',
-          amount: Math.round(expenses * 0.1),
-          percentage: 10.0,
+          category: 'Total Approved Expenses',
+          amount: Math.round(expenses),
+          percentage: 100.0,
         },
       ];
 
@@ -94,15 +95,13 @@ router.get('/', requireAuth, async (req, res) => {
         }),
         income: income,
         expenses: expenses,
-        net: net,
-        profitMargin: Math.round(profitMargin * 10) / 10, // Round to 1 decimal place
         incomeBreakdown: incomeBreakdown,
         expenseBreakdown: expenseBreakdown,
         attendeesCount: event.attendeesCount,
         description: event.description,
         location: event.location,
       };
-    });
+    }));
 
     res.json({
       success: true,
@@ -134,8 +133,6 @@ router.get('/:eventId', requireAuth, async (req, res) => {
       where: {
         id: eventId,
         organizationId: organizationId,
-        budget: { not: null },
-        actualCost: { not: null },
       },
       select: {
         id: true,
@@ -156,45 +153,47 @@ router.get('/:eventId', requireAuth, async (req, res) => {
       });
     }
 
-    const income = event.budget || 0;
-    const expenses = event.actualCost || 0;
-    const net = income - expenses;
-    const profitMargin = income > 0 ? ((net / income) * 100) : 0;
+    // Get approved income for this event
+    const approvedIncomes = await prisma.income.aggregate({
+      where: {
+        eventId: event.id,
+        approveStatus: 'Approved',
+      },
+      _sum: {
+        amount: true,
+      },
+      _count: true,
+    });
 
-    // Generate sample breakdown data
+    // Get approved expenses for this event
+    const approvedExpenses = await prisma.expense.aggregate({
+      where: {
+        eventId: event.id,
+        approveStatus: 'Approved',
+      },
+      _sum: {
+        amount: true,
+      },
+      _count: true,
+    });
+
+    const income = approvedIncomes._sum.amount || 0;
+    const expenses = approvedExpenses._sum.amount || 0;
+
+    // Get income breakdown by category
     const incomeBreakdown = [
       {
-        category: 'Member Contributions',
-        amount: Math.round(income * 0.7),
-        percentage: 70.0,
-      },
-      {
-        category: 'Sponsor Donations',
-        amount: Math.round(income * 0.3),
-        percentage: 30.0,
+        category: 'Total Approved Income',
+        amount: Math.round(income),
+        percentage: 100.0,
       },
     ];
 
     const expenseBreakdown = [
       {
-        category: 'Venue',
-        amount: Math.round(expenses * 0.4),
-        percentage: 40.0,
-      },
-      {
-        category: 'Catering',
-        amount: Math.round(expenses * 0.3),
-        percentage: 30.0,
-      },
-      {
-        category: 'Equipment',
-        amount: Math.round(expenses * 0.2),
-        percentage: 20.0,
-      },
-      {
-        category: 'Marketing',
-        amount: Math.round(expenses * 0.1),
-        percentage: 10.0,
+        category: 'Total Approved Expenses',
+        amount: Math.round(expenses),
+        percentage: 100.0,
       },
     ];
 
@@ -208,8 +207,6 @@ router.get('/:eventId', requireAuth, async (req, res) => {
       }),
       income: income,
       expenses: expenses,
-      net: net,
-      profitMargin: Math.round(profitMargin * 10) / 10,
       incomeBreakdown: incomeBreakdown,
       expenseBreakdown: expenseBreakdown,
       attendeesCount: event.attendeesCount,
