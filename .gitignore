@@ -4,6 +4,7 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
+.claude/
 
 # Environment variables
 .env
@@ -12,6 +13,10 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 .env.*
+
+# Local development scripts
+package.local.json
+*.local.json
 
 # Database
 *.db

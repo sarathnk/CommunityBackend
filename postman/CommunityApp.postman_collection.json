@@ -1,0 +1,2166 @@
+{
+  "info": {
+    "name": "Community App API",
+    "description": "Complete API collection for Community App backend with test data",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "community-app-v1"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Check Phone Availability",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/check-phone?phone=+919876543210",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "check-phone"],
+              "query": [
+                {
+                  "key": "phone",
+                  "value": "+919876543210",
+                  "description": "Phone number to check"
+                }
+              ]
+            },
+            "description": "Check if a phone number is available for registration"
+          },
+          "response": []
+        },
+        {
+          "name": "Login with Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
+                  "    console.log(\"Token saved:\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919876543210\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login with phone and password. Token is automatically saved to environment."
+          },
+          "response": []
+        },
+        {
+          "name": "Request OTP",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919876543210\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/otp/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "otp", "request"]
+            },
+            "description": "Request OTP for phone number. OTP will be returned in response for testing."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
+                  "    console.log(\"Token saved:\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+919876543210\",\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/otp/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "otp", "verify"]
+            },
+            "description": "Verify OTP and get auth token. Token is automatically saved to environment."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{authToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            },
+            "description": "Refresh existing token to get a new one"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Organizations",
+      "item": [
+        {
+          "name": "Register Organization",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
+                  "    pm.environment.set(\"organizationId\", jsonData.organization.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech Community Hub\",\n  \"type\": \"Tech\",\n  \"description\": \"A vibrant community for tech enthusiasts\",\n  \"logoUrl\": null,\n  \"themeColor\": \"#4F46E5\",\n  \"place\": \"San Francisco, CA\",\n  \"admin\": {\n    \"phone\": \"+919876543210\",\n    \"otp\": \"123456\",\n    \"fullName\": \"John Doe\",\n    \"photoUrl\": null\n  },\n  \"roles\": [\n    {\n      \"name\": \"Admin\",\n      \"description\": \"Full access\",\n      \"permissions\": [\"*\"],\n      \"isDefault\": true\n    },\n    {\n      \"name\": \"Member\",\n      \"description\": \"Standard member\",\n      \"permissions\": [\"read\"],\n      \"isDefault\": true\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/organizations/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "organizations", "register"]
+            },
+            "description": "Register a new organization with admin user"
+          },
+          "response": []
+        },
+        {
+          "name": "List Organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/organizations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "organizations"]
+            },
+            "description": "List all organizations (super admin sees all, regular users see their own)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Organization",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tech Community Hub - Updated\",\n  \"description\": \"Updated description\",\n  \"themeColor\": \"#10B981\",\n  \"place\": \"New York, NY\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/organizations/update",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "organizations", "update"]
+            },
+            "description": "Update organization details"
+          },
+          "response": []
+        },
+        {
+          "name": "Switch Organization (Super Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"authToken\", jsonData.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"organizationId\": \"org-id-here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/organizations/switch",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "organizations", "switch"]
+            },
+            "description": "Switch organization context (super admin only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Profile",
+      "item": [
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me"]
+            },
+            "description": "Get current authenticated user details"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Organizations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/me/organizations?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me", "organizations"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Get organizations for current user"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/roles?limit=20&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "roles"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search query"
+                },
+                {
+                  "key": "organizationId",
+                  "value": "",
+                  "description": "Filter by organization ID",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all roles with pagination and search"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Moderator\",\n  \"description\": \"Can moderate content and manage events\",\n  \"permissions\": [\"events.write\", \"announcements.write\", \"members.read\"],\n  \"color\": \"#F59E0B\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "roles"]
+            },
+            "description": "Create a new role"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Moderator\",\n  \"description\": \"Updated description\",\n  \"permissions\": [\"events.write\", \"announcements.write\", \"members.read\", \"elections.write\"],\n  \"color\": \"#EF4444\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/roles/:roleId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "roles", ":roleId"],
+              "variable": [
+                {
+                  "key": "roleId",
+                  "value": "role-id-here"
+                }
+              ]
+            },
+            "description": "Update an existing role"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/roles/:roleId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "roles", ":roleId"],
+              "variable": [
+                {
+                  "key": "roleId",
+                  "value": "role-id-here"
+                }
+              ]
+            },
+            "description": "Delete a role"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Members",
+      "item": [
+        {
+          "name": "List Members",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/members?limit=20&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "members"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search by name or phone"
+                }
+              ]
+            },
+            "description": "List all members with pagination and search"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Smith\",\n  \"phoneNumber\": \"+919876543211\",\n  \"roleId\": \"role-id-here\",\n  \"password\": \"Welcome123!\",\n  \"photoUrl\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "members"]
+            },
+            "description": "Create a new member"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Member",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jane Smith Updated\",\n  \"roleId\": \"new-role-id\",\n  \"photoUrl\": \"/uploads/photo.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/members/:memberId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "members", ":memberId"],
+              "variable": [
+                {
+                  "key": "memberId",
+                  "value": "member-id-here"
+                }
+              ]
+            },
+            "description": "Update member details"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Member",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/members/:memberId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "members", ":memberId"],
+              "variable": [
+                {
+                  "key": "memberId",
+                  "value": "member-id-here"
+                }
+              ]
+            },
+            "description": "Delete a member"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        {
+          "name": "List Events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/events?limit=20&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search by title or location"
+                }
+              ]
+            },
+            "description": "List all events with pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Annual Tech Conference 2025\",\n  \"description\": \"Join us for our biggest tech conference of the year\",\n  \"location\": \"Convention Center, San Francisco\",\n  \"startDate\": \"2025-12-15T09:00:00Z\",\n  \"endDate\": \"2025-12-17T18:00:00Z\",\n  \"imageUrl\": \"/uploads/event-banner.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "events"]
+            },
+            "description": "Create a new event"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Announcements",
+      "item": [
+        {
+          "name": "List Announcements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/announcements?limit=20&q=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "announcements"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search by title or content"
+                }
+              ]
+            },
+            "description": "List all announcements"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Announcement",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Important Community Update\",\n  \"content\": \"We are excited to announce new features coming to the platform!\",\n  \"isPinned\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/announcements",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "announcements"]
+            },
+            "description": "Create a new announcement"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Elections",
+      "item": [
+        {
+          "name": "List Elections",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/elections?limit=20&status=active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "Filter by status: draft, active, completed, cancelled"
+                }
+              ]
+            },
+            "description": "List all elections"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Election Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                }
+              ]
+            },
+            "description": "Get detailed election information with candidates"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Election",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Board Elections 2025\",\n  \"description\": \"Annual board member elections\",\n  \"type\": \"board\",\n  \"startDate\": \"2025-11-01T00:00:00Z\",\n  \"endDate\": \"2025-11-15T23:59:59Z\",\n  \"allowMultiple\": false,\n  \"maxVotes\": null,\n  \"isAnonymous\": true,\n  \"candidates\": [\n    {\n      \"name\": \"Alice Johnson\",\n      \"description\": \"5 years of community experience\",\n      \"photoUrl\": null,\n      \"position\": \"President\"\n    },\n    {\n      \"name\": \"Bob Williams\",\n      \"description\": \"Technology expert\",\n      \"photoUrl\": null,\n      \"position\": \"President\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elections",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections"]
+            },
+            "description": "Create a new election with candidates"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Election",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Board Elections 2025 - Updated\",\n  \"status\": \"active\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                }
+              ]
+            },
+            "description": "Update election details"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Election",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                }
+              ]
+            },
+            "description": "Delete an election"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Candidate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Charlie Brown\",\n  \"description\": \"Marketing specialist\",\n  \"photoUrl\": null,\n  \"position\": \"Secretary\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId/candidates",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId", "candidates"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                }
+              ]
+            },
+            "description": "Add a candidate to an election"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Candidate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Charlie Brown\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId/candidates/:candidateId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId", "candidates", ":candidateId"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                },
+                {
+                  "key": "candidateId",
+                  "value": "candidate-id-here"
+                }
+              ]
+            },
+            "description": "Update candidate details"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Candidate",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId/candidates/:candidateId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId", "candidates", ":candidateId"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                },
+                {
+                  "key": "candidateId",
+                  "value": "candidate-id-here"
+                }
+              ]
+            },
+            "description": "Delete a candidate"
+          },
+          "response": []
+        },
+        {
+          "name": "Cast Vote",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"candidateIds\": [\"candidate-id-1\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId/vote",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId", "vote"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                }
+              ]
+            },
+            "description": "Cast vote for candidate(s)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Election Results",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/elections/:electionId/results",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "elections", ":electionId", "results"],
+              "variable": [
+                {
+                  "key": "electionId",
+                  "value": "election-id-here"
+                }
+              ]
+            },
+            "description": "Get election results with vote counts"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Chats",
+      "item": [
+        {
+          "name": "List Chats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats"]
+            },
+            "description": "Get all chats for the current user"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Chat",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General Discussion\",\n  \"description\": \"General chat for all members\",\n  \"type\": \"group\",\n  \"isPrivate\": false,\n  \"participantIds\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/chats",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats"]
+            },
+            "description": "Create a new chat group"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Chat Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/:chatId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats", ":chatId"],
+              "variable": [
+                {
+                  "key": "chatId",
+                  "value": "chat-id-here"
+                }
+              ]
+            },
+            "description": "Get chat details with participants"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Chat",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Chat Name\",\n  \"description\": \"Updated description\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/:chatId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats", ":chatId"],
+              "variable": [
+                {
+                  "key": "chatId",
+                  "value": "chat-id-here"
+                }
+              ]
+            },
+            "description": "Update chat details"
+          },
+          "response": []
+        },
+        {
+          "name": "Add Participants",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"participantIds\": [\"user-id-1\", \"user-id-2\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/:chatId/participants",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats", ":chatId", "participants"],
+              "variable": [
+                {
+                  "key": "chatId",
+                  "value": "chat-id-here"
+                }
+              ]
+            },
+            "description": "Add participants to chat"
+          },
+          "response": []
+        },
+        {
+          "name": "Remove Participant",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/:chatId/participants/:userId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats", ":chatId", "participants", ":userId"],
+              "variable": [
+                {
+                  "key": "chatId",
+                  "value": "chat-id-here"
+                },
+                {
+                  "key": "userId",
+                  "value": "user-id-here"
+                }
+              ]
+            },
+            "description": "Remove participant from chat"
+          },
+          "response": []
+        },
+        {
+          "name": "Leave Chat",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/:chatId/leave",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats", ":chatId", "leave"],
+              "variable": [
+                {
+                  "key": "chatId",
+                  "value": "chat-id-here"
+                }
+              ]
+            },
+            "description": "Leave a chat"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Chat",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/chats/:chatId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "chats", ":chatId"],
+              "variable": [
+                {
+                  "key": "chatId",
+                  "value": "chat-id-here"
+                }
+              ]
+            },
+            "description": "Delete a chat (admin only)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Get Chat Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/chat/:chatId?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "chat", ":chatId"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "chatId",
+                  "value": "chat-id-here"
+                }
+              ]
+            },
+            "description": "Get messages for a chat"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"chat-id-here\",\n  \"content\": \"Hello everyone!\",\n  \"type\": \"text\",\n  \"replyToId\": null\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages"]
+            },
+            "description": "Send a message to a chat"
+          },
+          "response": []
+        },
+        {
+          "name": "Edit Message",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Updated message content\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/:messageId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", ":messageId"],
+              "variable": [
+                {
+                  "key": "messageId",
+                  "value": "message-id-here"
+                }
+              ]
+            },
+            "description": "Edit your own message"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Message",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/:messageId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", ":messageId"],
+              "variable": [
+                {
+                  "key": "messageId",
+                  "value": "message-id-here"
+                }
+              ]
+            },
+            "description": "Delete a message"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Messages as Read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"chatId\": \"chat-id-here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/mark-read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "mark-read"]
+            },
+            "description": "Mark all messages in a chat as read"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "messages", "unread-count"]
+            },
+            "description": "Get unread message count"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "List Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
+            },
+            "description": "Get all notifications for current user"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Notification (Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test Notification\",\n  \"message\": \"This is a test notification\",\n  \"type\": \"general\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications"]
+            },
+            "description": "Create a test notification"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Notification as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isRead\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/:notificationId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", ":notificationId"],
+              "variable": [
+                {
+                  "key": "notificationId",
+                  "value": "notification-id-here"
+                }
+              ]
+            },
+            "description": "Mark a notification as read"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/mark-all-read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "notifications", "mark-all-read"]
+            },
+            "description": "Mark all notifications as read"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Data",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard"]
+            },
+            "description": "Get dashboard statistics and overview"
+          },
+          "response": []
+        },
+        {
+          "name": "Test Database Connection",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/test-db",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "test-db"]
+            },
+            "description": "Test database connection"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Event Financials",
+      "item": [
+        {
+          "name": "List Event Financials",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/event-financials",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "event-financials"]
+            },
+            "description": "Get all events with financial data"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Event Financial Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/event-financials/:eventId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "event-financials", ":eventId"],
+              "variable": [
+                {
+                  "key": "eventId",
+                  "value": "event-id-here"
+                }
+              ]
+            },
+            "description": "Get financial data for specific event"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Income",
+      "item": [
+        {
+          "name": "List Income Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/income?limit=20&eventId=&paidStatus=&approveStatus=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "eventId",
+                  "value": "",
+                  "description": "Filter by event"
+                },
+                {
+                  "key": "paidStatus",
+                  "value": "",
+                  "description": "Pending or Paid"
+                },
+                {
+                  "key": "approveStatus",
+                  "value": "",
+                  "description": "Approved, Declined, or Pending"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search query",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all income records with filtering"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Income Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/income/stats?eventId=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income", "stats"],
+              "query": [
+                {
+                  "key": "eventId",
+                  "value": "",
+                  "description": "Filter by event"
+                }
+              ]
+            },
+            "description": "Get income statistics and totals"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Income Record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/income/:incomeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income", ":incomeId"],
+              "variable": [
+                {
+                  "key": "incomeId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Get single income record details"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Income Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"receiptPic\": \"/uploads/receipt.jpg\",\n  \"receiptNumber\": \"RCT-2025-001\",\n  \"amount\": 5000,\n  \"description\": \"Payment for event registration\",\n  \"eventId\": \"event-id-here\",\n  \"paidStatus\": \"Paid\",\n  \"approveStatus\": \"Pending\",\n  \"date\": \"2025-11-05\",\n  \"time\": \"14:30:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/income",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income"]
+            },
+            "description": "Create a new income record"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Income Record",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 5500,\n  \"paidStatus\": \"Paid\",\n  \"approveStatus\": \"Approved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/income/:incomeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income", ":incomeId"],
+              "variable": [
+                {
+                  "key": "incomeId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Update income record"
+          },
+          "response": []
+        },
+        {
+          "name": "Approve/Decline Income",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approveStatus\": \"Approved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/income/:incomeId/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income", ":incomeId", "approve"],
+              "variable": [
+                {
+                  "key": "incomeId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Approve or decline income record"
+          },
+          "response": []
+        },
+        {
+          "name": "Mark Income as Paid",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paidStatus\": \"Paid\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/income/:incomeId/paid",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income", ":incomeId", "paid"],
+              "variable": [
+                {
+                  "key": "incomeId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Mark income as paid or pending"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Income Record",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/income/:incomeId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "income", ":incomeId"],
+              "variable": [
+                {
+                  "key": "incomeId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Delete an income record"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Expense",
+      "item": [
+        {
+          "name": "List Expense Records",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expense?limit=20&eventId=&approveStatus=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expense"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "eventId",
+                  "value": "",
+                  "description": "Filter by event"
+                },
+                {
+                  "key": "approveStatus",
+                  "value": "",
+                  "description": "Approved, Declined, or Pending"
+                },
+                {
+                  "key": "q",
+                  "value": "",
+                  "description": "Search query",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List all expense records with filtering"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expense/stats?eventId=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expense", "stats"],
+              "query": [
+                {
+                  "key": "eventId",
+                  "value": "",
+                  "description": "Filter by event"
+                }
+              ]
+            },
+            "description": "Get expense statistics and totals"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Expense Record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expense/:expenseId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expense", ":expenseId"],
+              "variable": [
+                {
+                  "key": "expenseId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Get single expense record details"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Expense Record",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"billPic\": \"/uploads/bill.jpg\",\n  \"billNumber\": \"BILL-2025-001\",\n  \"amount\": 3000,\n  \"description\": \"Venue rental for event\",\n  \"eventId\": \"event-id-here\",\n  \"approveStatus\": \"Pending\",\n  \"date\": \"2025-11-05\",\n  \"time\": \"14:30:00\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expense",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expense"]
+            },
+            "description": "Create a new expense record"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Expense Record",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 3500,\n  \"approveStatus\": \"Approved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expense/:expenseId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expense", ":expenseId"],
+              "variable": [
+                {
+                  "key": "expenseId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Update expense record"
+          },
+          "response": []
+        },
+        {
+          "name": "Approve/Decline Expense",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"approveStatus\": \"Approved\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/expense/:expenseId/approve",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expense", ":expenseId", "approve"],
+              "variable": [
+                {
+                  "key": "expenseId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Approve or decline expense record"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Expense Record",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/expense/:expenseId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "expense", ":expenseId"],
+              "variable": [
+                {
+                  "key": "expenseId",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "Delete an expense record"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Subscription",
+      "item": [
+        {
+          "name": "Get User Subscription",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/subscription",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscription"]
+            },
+            "description": "Get current user's subscription details"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Subscription Plans",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/subscription/plans",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscription", "plans"]
+            },
+            "description": "Get available subscription plans"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Payment Order",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"yearly\",\n  \"amount\": 9999,\n  \"currency\": \"INR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscription/create-payment-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscription", "create-payment-order"]
+            },
+            "description": "Create payment order for subscription"
+          },
+          "response": []
+        },
+        {
+          "name": "Complete Subscription Purchase",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order-id-here\",\n  \"paymentId\": \"payment-id-here\",\n  \"signature\": \"signature-here\",\n  \"plan\": \"yearly\",\n  \"amount\": 9999,\n  \"currency\": \"INR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscription/complete-purchase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscription", "complete-purchase"]
+            },
+            "description": "Complete subscription purchase after payment"
+          },
+          "response": []
+        },
+        {
+          "name": "Purchase Subscription (Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plan\": \"yearly\",\n  \"amount\": 9999,\n  \"currency\": \"INR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/subscription/purchase",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscription", "purchase"]
+            },
+            "description": "Test purchase without payment gateway"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Subscription",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/subscription/cancel",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "subscription", "cancel"]
+            },
+            "description": "Cancel current subscription"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "item": [
+        {
+          "name": "Create Payment Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 9999,\n  \"currency\": \"INR\",\n  \"plan\": \"yearly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/create-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "create-order"]
+            },
+            "description": "Create a payment order"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order-id-here\",\n  \"paymentId\": \"payment-id-here\",\n  \"signature\": \"signature-here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "verify"]
+            },
+            "description": "Verify payment signature"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/:paymentId",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", ":paymentId"],
+              "variable": [
+                {
+                  "key": "paymentId",
+                  "value": "payment-id-here"
+                }
+              ]
+            },
+            "description": "Get payment details by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Refund Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": \"payment-id-here\",\n  \"amount\": 9999\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/refund",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "refund"]
+            },
+            "description": "Refund a payment"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload File",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Select a file to upload"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "upload"]
+            },
+            "description": "Upload a file (image, document, etc.)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Logo",
+      "item": [
+        {
+          "name": "Generate Logo",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"communityName\": \"Tech Community Hub\",\n  \"type\": \"Tech\",\n  \"description\": \"A vibrant tech community\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/logo/generate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logo", "generate"]
+            },
+            "description": "Generate a custom logo for community"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Simple Logo",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"communityName\": \"Tech Community Hub\",\n  \"type\": \"Tech\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/logo/generate-simple",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logo", "generate-simple"]
+            },
+            "description": "Generate a simple text-based logo"
+          },
+          "response": []
+        },
+        {
+          "name": "Generate Logo Options",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"communityName\": \"Tech Community Hub\",\n  \"type\": \"Tech\",\n  \"description\": \"A vibrant tech community\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/logo/generate-options",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "logo", "generate-options"]
+            },
+            "description": "Generate multiple logo options"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    }
+  ]
+}
